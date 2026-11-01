@@ -1,6 +1,6 @@
 # Codex Mini Menu
 
-**2.16.1: Restore launcher input while the card is open.** Native mouse tests cover dragging, tilt return, closing and reopening. Moving interactions target 90+ updates/second. The docked launcher shares the card's glass material, with a rotating angular border and visible diffuse breathing light. [Measurements and development rules](docs/conic-motion-2.16.0.md)
+**2.17.0: Rotating glass lighting.** Two diffuse theme colors revolve around the card center, with the background and conic border sharing one color field and rotation phase. [Design and validation](docs/rotating-glass-2.17.0.md)
 
 **2.15.0: Faster floating editors and theme lighting.** Duration editors open in 190 ms, with compact spacing, smoother reflective light and launcher handoff. A rotating theme border and breathing bottom glow follow the current appearance. [Details and validation](docs/motion-polish-2.15.0.md)
 

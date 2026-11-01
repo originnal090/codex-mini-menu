@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -22,6 +22,7 @@ class WindowTests {
   struct RECT{public int L,T,R,B;}
   [DllImport("user32.dll")]static extern bool ShowWindow(IntPtr h,int command);
   static string output;static Process child;static int checks;
+  static async Task WaitUntil(Func<bool> ready){var elapsed=Stopwatch.StartNew();while(!ready()&&elapsed.ElapsedMilliseconds<2500)await Task.Delay(50);}
   static IntPtr Find(bool panel){IntPtr result=IntPtr.Zero;EnumWindows((h,x)=>{uint id;GetWindowThreadProcessId(h,out id);var text=new StringBuilder(256);GetWindowText(h,text,256);if(id==child.Id&&IsWindowVisible(h)&&(panel?text.ToString()=="小菜单":text.Length==0))result=h;return true;},IntPtr.Zero);return result;}
   static void Check(bool ok,string name){if(!ok)throw new Exception(name);checks++;File.AppendAllText(output,"PASS "+name+Environment.NewLine);}
   static void ClickBubble(IntPtr handle){var window=AutomationElement.FromHandle(handle);var button=window.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Button));if(button==null)throw new Exception("No accessible timer button");((InvokePattern)button.GetCurrentPattern(InvokePattern.Pattern)).Invoke();}
@@ -72,7 +73,7 @@ class WindowTests {
         RECT resizeBefore,resizeAfter;GetWindowRect(bubble,out resizeBefore);host.Width-=120;await Task.Delay(350);GetWindowRect(bubble,out resizeAfter);Check(resizeAfter.L==resizeBefore.L-120,"right anchor tracks host resize");
         File.WriteAllText(Path.Combine(profile,"foreground.txt"),"0");await Task.Delay(350);Check(Find(false)==IntPtr.Zero&&Find(true)==IntPtr.Zero,"switching away hides ordinary menu windows");
         File.WriteAllText(Path.Combine(profile,"foreground.txt"),host.Handle.ToInt64().ToString());await Task.Delay(350);Check(Find(false)!=IntPtr.Zero,"returning to host restores launcher");
-        var second=new Form{Text="Second Codex window",StartPosition=FormStartPosition.Manual,Location=new Point(80,80),Size=new Size(800,700)};second.Show();File.WriteAllText(Path.Combine(profile,"foreground.txt"),second.Handle.ToInt64().ToString());await Task.Delay(350);Check(GetWindow(bubble,4)==second.Handle,"switching Codex windows reassigns ownership");
+        var second=new Form{Text="Second Codex window",StartPosition=FormStartPosition.Manual,Location=new Point(80,80),Size=new Size(800,700)};second.Show();File.WriteAllText(Path.Combine(profile,"foreground.txt"),second.Handle.ToInt64().ToString());await WaitUntil(()=>GetWindow(bubble,4)==second.Handle);Check(GetWindow(bubble,4)==second.Handle,"switching Codex windows reassigns ownership");
         second.Close();await Task.Delay(350);Check(Find(false)==IntPtr.Zero,"closing host leaves no visible launcher");Check(!child.HasExited,"host closing does not terminate plugin");
         File.WriteAllText(Path.Combine(profile,"foreground.txt"),host.Handle.ToInt64().ToString());await Task.Delay(450);bubble=Find(false);Check(bubble!=IntPtr.Zero,"launcher can reattach after previous host closes");ClickBubble(bubble);await Task.Delay(300);Check(Find(true)!=IntPtr.Zero,"menu can reopen after previous host closes");
         File.AppendAllText(output,checks+" window checks passed");
