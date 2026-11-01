@@ -100,7 +100,7 @@ namespace RingTimer {
       appearance=new AppearanceSettings(Path.Combine(data,"appearance.json"));registry=FeatureRegistry.Load(moduleRoot,timerFeature,new StatsFeature(stats),contextFeature);bubble=new Bubble();panel=new MenuWindow(registry,()=>{alert=false;manual=false;pinned=false;panel.Topmost=false;Track();},ResetPosition,appearance);
       if(testRoot==null&&registry.Find("context")!=null)contextTracker=new ContextTracker(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex"));
       follower=new NativeFollower();tracker=new HostTracker(Track);
-      panel.AnchorBounds=()=>bubble.IsVisible?(Native.RECT?)bubble.PixelBounds:null;
+      panel.Launcher=bubble;panel.AnchorBounds=()=>bubble.IsVisible?(Native.RECT?)bubble.PixelBounds:null;
       bubble.Clicked=()=>{if(panel.IsVisible&&!panel.IsClosing)panel.ClosePanel();else OpenPanel(false,null);};
       bubble.DragStarted=()=>follower.Suspend(true);bubble.PositionChanged=()=>{if(panel.IsVisible)PlacePanel();};
       bubble.DragArea=()=>{Native.RECT host;if(target==IntPtr.Zero||!Native.GetWindowRect(target,out host))return null;var area=Forms.Screen.FromHandle(target).WorkingArea;return (Native.RECT?)new Native.RECT{Left=Math.Max(host.Left,area.Left),Top=Math.Max(host.Top,area.Top),Right=Math.Min(host.Right,area.Right),Bottom=Math.Min(host.Bottom,area.Bottom)};};
@@ -155,7 +155,7 @@ namespace RingTimer {
       if(!bubble.IsVisible){Native.GetWindowRect(target,out r);var b=bubble.PixelBounds;var area=Forms.Screen.FromHandle(target).WorkingArea;double scale=Native.ScaleFor(bubble.Handle);bubble.MovePixels(Math.Max(area.Left,Math.Min(area.Right-b.Width,r.Right-(int)(engine.State.OffsetX*scale)-b.Width)),Math.Max(area.Top,Math.Min(area.Bottom-b.Height,r.Bottom-(int)(engine.State.OffsetY*scale)-b.Height)));bubble.Show();}
       PublishLayout();
     }
-    void PublishLayout(){if(follower==null)return;double scale=Native.ScaleFor(bubble.Handle);follower.Update(target==IntPtr.Zero?null:new FollowLayout(target,bubble.Handle,panel.IsVisible?panel.Handle:IntPtr.Zero,(int)(engine.State.OffsetX*scale),(int)(engine.State.OffsetY*scale),(int)(8*scale),panel.Above?-1:1,(int)Math.Round(14*scale)));}
+    void PublishLayout(){if(follower==null)return;double scale=Native.ScaleFor(bubble.Handle);follower.Update(target==IntPtr.Zero?null:new FollowLayout(target,bubble.Handle,panel.IsVisible?panel.Handle:IntPtr.Zero,(int)(engine.State.OffsetX*scale),(int)(engine.State.OffsetY*scale),(int)(8*scale),panel.Above?-1:1,(int)Math.Round(Theme.LauncherDockInset*scale)));}
     void PlacePanel(){PlacePanel(bubble,panel,panel.Above?-1:1);}
     static Native.RECT ToRect(Rectangle r){Native.RECT n=new Native.RECT();n.Left=r.Left;n.Top=r.Top;n.Right=r.Right;n.Bottom=r.Bottom;return n;}
     int PanelGap(){return (int)(8*Native.ScaleFor(bubble.Handle));}
@@ -166,7 +166,7 @@ namespace RingTimer {
       try{var size=panel.MeasurePopup();double scale=Native.ScaleFor(panel.Handle);int width=(int)Math.Round(size.Width*scale),height=(int)Math.Round(size.Height*scale);var b=bubble.PixelBounds;Native.POINT cursor;Native.GetCursorPos(out cursor);
         var area=ToRect(Forms.Screen.FromPoint(bubble.IsVisible?new System.Drawing.Point(b.Left,b.Top):new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea);
         int x,y;
-        if(bubble.IsVisible){int inset=(int)Math.Round(14*scale);x=PanelPlacement.DockX(area,b,width,inset);y=PanelPlacement.DockY(area,b,height,inset,panel.Above?-1:1);}
+        if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*scale);x=PanelPlacement.DockX(area,b,width,inset);y=PanelPlacement.DockY(area,b,height,inset,panel.Above?-1:1);}
         else{x=Math.Max(area.Left,area.Right-width-24);y=Math.Max(area.Top,area.Bottom-height-24);}
         panel.SetBoundsPixels(x,y,width,height);PublishLayout();
       }finally{follower.Suspend(bubble.Dragging);}
@@ -175,7 +175,7 @@ namespace RingTimer {
       var b=bubble.PixelBounds;Native.POINT cursor;Native.GetCursorPos(out cursor);
       var area=ToRect(Forms.Screen.FromPoint(bubble.IsVisible?new System.Drawing.Point(b.Left,b.Top):new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea);
       var p=panel.PixelBounds;int gap=(int)(8*Native.ScaleFor(bubble.Handle));int x,y;
-      if(bubble.IsVisible){int inset=(int)Math.Round(14*Native.ScaleFor(bubble.Handle));x=PanelPlacement.DockX(area,b,p.Width,inset);y=PanelPlacement.DockY(area,b,p.Height,inset,side==0?-1:side);}
+      if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*Native.ScaleFor(bubble.Handle));x=PanelPlacement.DockX(area,b,p.Width,inset);y=PanelPlacement.DockY(area,b,p.Height,inset,side==0?-1:side);}
       else{x=Math.Max(area.Left,area.Right-p.Width-24);y=Math.Max(area.Top,area.Bottom-p.Height-24);}
       panel.MovePixels(x,y);
     }

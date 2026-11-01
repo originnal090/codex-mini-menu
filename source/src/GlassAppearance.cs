@@ -91,9 +91,10 @@ namespace RingTimer {
     [StructLayout(LayoutKind.Sequential)]struct RegionPoint{public int X,Y;public RegionPoint(Point p){X=(int)Math.Round(p.X);Y=(int)Math.Round(p.Y);}}
     [DllImport("gdi32.dll")]static extern IntPtr CreatePolygonRgn(RegionPoint[] points,int count,int mode);
     [DllImport("user32.dll")]static extern int SetWindowRgn(IntPtr window,IntPtr region,bool redraw);
-    public static void ProjectedShape(IntPtr window,Point[] outline,Rect hole){
+    public static void ProjectedShape(IntPtr window,Point[] outline,Rect hole,Point[] extension=null){
       var points=new RegionPoint[outline.Length];for(int i=0;i<points.Length;i++)points[i]=new RegionPoint(outline[i]);
       IntPtr region=CreatePolygonRgn(points,points.Length,1);if(region==IntPtr.Zero)return;
+      if(extension!=null){var extra=new RegionPoint[extension.Length];for(int i=0;i<extra.Length;i++)extra[i]=new RegionPoint(extension[i]);IntPtr added=CreatePolygonRgn(extra,extra.Length,1);if(added!=IntPtr.Zero){CombineRgn(region,region,added,2);DeleteObject(added);}}
       // The launcher is an independent screen-space anchor, so its cutout stays
       // aligned with that launcher while only the outer card contour tilts.
       if(!hole.IsEmpty){IntPtr cut=CreateEllipticRgn((int)hole.Left,(int)hole.Top,(int)hole.Right+1,(int)hole.Bottom+1);if(cut!=IntPtr.Zero){CombineRgn(region,region,cut,4);DeleteObject(cut);}}

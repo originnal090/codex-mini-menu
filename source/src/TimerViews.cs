@@ -20,6 +20,7 @@ using ShapePath=System.Windows.Shapes.Path;
 namespace RingTimer {
   static partial class Theme {
     public const int ControlRadius=22,MenuInset=24,MenuRadius=34,MenuWidth=368,MenuContentWidth=302;
+    public const int LauncherDockInset=8+MenuRadius-22;
     public const int RowInset=16,RowIconColumn=28;
     static readonly Dictionary<string,SolidColorBrush> brushes=new Dictionary<string,SolidColorBrush>();
     public static SolidColorBrush Brush(string hex){SolidColorBrush b;if(brushes.TryGetValue(hex,out b))return b;b=(SolidColorBrush)new BrushConverter().ConvertFromInvariantString(hex);b.Freeze();brushes.Add(hex,b);return b;}

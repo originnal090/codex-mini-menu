@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +21,7 @@ class BackAnchorTests {
   bubble=new Bubble();bubble.Show();bubble.MovePixels(area.Right-120,area.Bottom-70);
   menu=new MenuWindow(new FeatureRegistry(new TimerFeature(timer,()=>{})),()=>{},()=>{}){AnimationsEnabled=true,Above=true};
   menu.AnchorBounds=()=>bubble.PixelBounds;
-  menu.PresentationRequested=()=>{var size=menu.MeasurePopup();double scale=Native.ScaleFor(menu.Handle);var b=bubble.PixelBounds;int height=(int)Math.Round(size.Height*scale),width=(int)Math.Round(size.Width*scale);int bottom=b.Bottom+(int)Math.Round(14*scale);menu.SetBoundsPixels(b.Right+(int)(14*scale)-width,menu.Above?bottom-height:b.Top-(int)(14*scale),width,height);};
+  menu.PresentationRequested=()=>{var size=menu.MeasurePopup();double scale=Native.ScaleFor(menu.Handle);var b=bubble.PixelBounds;int height=(int)Math.Round(size.Height*scale),width=(int)Math.Round(size.Width*scale);int bottom=b.Bottom+(int)Math.Round(Theme.LauncherDockInset*scale);menu.SetBoundsPixels(b.Right+(int)(Theme.LauncherDockInset*scale)-width,menu.Above?bottom-height:b.Top-(int)(Theme.LauncherDockInset*scale),width,height);};
   bubble.PositionChanged=()=>menu.PresentationRequested();
   menu.OpenSettings();menu.Reveal();Wait(350);
   var back=(Button)typeof(MenuWindow).GetField("back",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(menu);
