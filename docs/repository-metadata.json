@@ -1,0 +1,25 @@
+{
+  "description": "Windows 悬浮计时器 / Codex timer：自定义番茄钟式工作与休息循环、倒计时、休息提醒、时间统计与上下文占用。A floating productivity companion with reflective glass cards and rotating conic-gradient light. 专注写代码，也记得站起来！",
+  "topics": [
+    "codex",
+    "openai-codex",
+    "windows",
+    "desktop-app",
+    "floating-window",
+    "timer",
+    "countdown-timer",
+    "pomodoro-timer",
+    "break-reminder",
+    "work-rest-timer",
+    "productivity",
+    "focus",
+    "time-tracking",
+    "activity-heatmap",
+    "context-window",
+    "glassmorphism",
+    "animation",
+    "conic-gradient",
+    "wpf",
+    "csharp"
+  ]
+}
