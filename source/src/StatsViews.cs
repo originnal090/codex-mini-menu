@@ -30,12 +30,12 @@ namespace RingTimer {
     readonly Style activeStyle=Theme.RoundedButtonStyle(true,8),inactiveStyle=Theme.RoundedButtonStyle(false,8);
     public string SelectedView{get{return view;}}
     public StatsPanel(StatsStore data):this(data,()=>DateTime.Today){}
-    public StatsPanel(StatsStore data,Func<DateTime> date){store=data;clock=date;selected=clock().Date;Height=406;FontFamily=Theme.Font;
-      var stack=new StackPanel();Content=stack;var summaries=new Grid{Height=88,Tag="wave"};summaries.ColumnDefinitions.Add(new ColumnDefinition());summaries.ColumnDefinitions.Add(new ColumnDefinition());stack.Children.Add(summaries);
-      var a=new StackPanel{Margin=new Thickness(0,22,0,0)};summaries.Children.Add(a);a.Children.Add(Theme.Text("● 今日工作",11,Theme.Done));summary=Theme.Text("",26,Theme.Foreground);a.Children.Add(summary);
-      var b=new StackPanel{Margin=new Thickness(0,22,0,0)};Grid.SetColumn(b,1);summaries.Children.Add(b);b.Children.Add(Theme.Text("● 今日休息",11,Theme.Focus));restSummary=Theme.Text("",26,Theme.Foreground);b.Children.Add(restSummary);
-      rail=new SlidingRail("日历","总量","分段"){Margin=new Thickness(0,12,0,12),Tag="wave"};rail.Changed+=i=>SelectView(new[]{"calendar","total","sessions"}[i]);stack.Children.Add(rail);rail.GestureEnded+=FlushPending;
-      body=new ContentControl{Height=244,HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Top};stack.Children.Add(body);notice=Theme.Text("",11,Theme.Error);notice.Height=16;notice.TextTrimming=TextTrimming.CharacterEllipsis;stack.Children.Add(notice);
+    public StatsPanel(StatsStore data,Func<DateTime> date){store=data;clock=date;selected=clock().Date;Height=Theme.FeatureHeight;FontFamily=Theme.Font;
+      var stack=new StackPanel();Content=stack;var summaries=new Grid{Height=84,Tag="wave"};summaries.ColumnDefinitions.Add(new ColumnDefinition());summaries.ColumnDefinitions.Add(new ColumnDefinition());stack.Children.Add(summaries);
+      var a=new StackPanel();var workIsland=Theme.Island(a,new Thickness(14));workIsland.Margin=new Thickness(0,0,7,0);summaries.Children.Add(workIsland);a.Children.Add(Theme.Text("● 今日工作",11,Theme.Done));summary=Theme.Text("",26,Theme.Foreground);a.Children.Add(summary);
+      var b=new StackPanel();var restIsland=Theme.Island(b,new Thickness(14));restIsland.Margin=new Thickness(7,0,0,0);Grid.SetColumn(restIsland,1);summaries.Children.Add(restIsland);b.Children.Add(Theme.Text("● 今日休息",11,Theme.Focus));restSummary=Theme.Text("",26,Theme.Foreground);b.Children.Add(restSummary);
+      rail=new SlidingRail("日历","总量","分段"){Margin=new Thickness(0,14,0,14),Tag="wave"};rail.Changed+=i=>SelectView(new[]{"calendar","total","sessions"}[i]);stack.Children.Add(rail);rail.GestureEnded+=FlushPending;
+      body=new ContentControl{Height=268,HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Top};stack.Children.Add(Theme.Island(body,new Thickness(11,12,11,12)));notice=Theme.Text("",11,Theme.Error);notice.Height=16;notice.TextTrimming=TextTrimming.CharacterEllipsis;stack.Children.Add(notice);
       body.LostMouseCapture+=(s,e)=>FlushPending();body.PreviewKeyUp+=(s,e)=>FlushPending();
       Loaded+=(s,e)=>{store.Changed+=OnChanged;Theme.Changed+=OnChanged;L.Changed+=OnChanged;Refresh(true);};Unloaded+=(s,e)=>{store.Changed-=OnChanged;Theme.Changed-=OnChanged;L.Changed-=OnChanged;};Refresh(true);
     }

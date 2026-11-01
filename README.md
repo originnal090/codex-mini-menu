@@ -1,96 +1,87 @@
 # Codex Mini Menu
 
-**A floating Windows utility menu that follows Codex.** Expand from a circular launcher, match the Codex theme, and enjoy pointer-following highlights, adjustable transparency and a frosted-glass finish. Built-in work/rest timers and a contribution-style activity heatmap help you track your focus, with more tools to come.
+**Build something great. Remember to get out of your chair.**
 
-**Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文**
+A little glass companion for Codex on Windows: work/rest reminders, a floating launcher, live reflective card motion, and two soft colors orbiting through the background and border.
 
-**English** · [简体中文](README.zh-CN.md) · [Download](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip) · [Issues & ideas](https://github.com/originnal090/codex-mini-menu/issues)
+**English** · [简体中文](README.zh-CN.md) · **[Download v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [What's new](CHANGELOG.md) · [Ideas & feedback](https://github.com/originnal090/codex-mini-menu/issues)
 
-## A menu that expands from its launcher
+Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文
 
-Click the floating ring to expand the menu from its position; closing brings it back. The launcher follows the active Codex window and can be dragged to a comfortable position. Use the lower-left back button to return from a tool to the menu.
+## Why I built it
 
-<p align="center"><img src="docs/images/menu-opening.gif" width="390" alt="Menu expanding from and collapsing into the floating launcher"></p>
+One more prompt. One more idea. One more thing to try with Codex… and suddenly, hours have disappeared. I would get so absorbed in the conversation that I barely moved from my chair, then notice my back aching when I finally stood up.
 
-## Colors that follow your Codex theme
+So I built a small reminder to look after the person writing the code, too. Set a work session, let the ring keep time, and take that nudge to stand up, stretch, or go for a short walk. I want to keep the joy of building things **and** remember to take a break!
 
-The menu reads Codex's appearance configuration and follows its light/dark theme and palette. Backgrounds, text, controls and accents update together while your timer state stays intact.
+And if a little tool is going to sit beside me all day, I want it to feel lovely to use. That's where the glass, the moving light, and the card you can tilt come in.
 
-<table>
-<tr><th>Dark theme</th><th>Light theme</th></tr>
-<tr><td><img src="docs/images/timer-en.png" width="280" alt="Dark theme"></td><td><img src="docs/images/light-en.png" width="280" alt="Light theme"></td></tr>
-</table>
-
-## Pointer tracking and tactile interactions
-
-A subtle surface highlight follows your pointer. Drag the statistics selector with gentle damping; text changes color exactly where the thumb passes. Buttons compress with an inset shadow, then gently rebound on release.
-
-<p align="center"><img src="docs/images/pointer-tracking.gif" width="390" alt="Subtle surface highlight following the mouse"></p>
-<p align="center"><img src="docs/images/interactions.gif" width="489" alt="Damped slider, live text contrast and elastic button feedback"></p>
-
-*The pointer recording preserves the actual highlight intensity; a cursor marker indicates the recorded mouse position. When system animations are disabled, controls show their final state immediately.*
-
-## A contribution-style heatmap for your focus
-
-The activity heatmap is generated automatically from actual timer records. Explore 13 weeks at a time, switch between work and rest, browse earlier dates, or select a day for its session timeline. Totals offer daily, weekly and monthly breakdowns with distinct work/rest colors.
+## A glass card with a little life in it
 
 <table>
-<tr><th>Daily activity heatmap</th><th>Separate work / rest totals</th></tr>
-<tr><td><img src="docs/images/heatmap-en.png" width="280" alt="Daily activity heatmap"></td><td><img src="docs/images/totals-en.png" width="280" alt="Separate work / rest totals"></td></tr>
+<tr><th>Rotating diffuse light</th><th>Live reflective card</th></tr>
+<tr><td><img src="docs/images/rotating-glass.gif" width="320" alt="Cool and warm diffuse light revolve around the card center while its conic border changes in sync"></td><td><img src="docs/images/silver-card-live.gif" width="320" alt="The live timer card tilts in perspective with a moving silver highlight and returns smoothly"></td></tr>
 </table>
 
-*Statistics shown here use demonstration data. Pauses are excluded; live elapsed time is included, and resetting retains active time already recorded.*
+**Light that travels through the whole card.** Two soft, theme-derived colors revolve around the center, one turn every **12 seconds**. The background and conic gradient border share the same color field and angle: wherever the glow goes, the edge follows. The center gently fades into the glass.
 
-## Adjustable transparency and frosted glass
+**A card you can play with.** Hold the **right mouse button** and move to tilt the menu in perspective. Its silver reflection follows the angle; release and it eases back into place. Controls and timer content stay live, and the launcher travels with the card during the tilt.
 
-Set transparency from 0–90% in **Settings → Appearance**. The menu, timer and floating ring update together. Translucent fills, gradient edges and background blur create a layered glass finish that blends with your desktop.
+*Scripted renders of the actual WPF interface, with demonstration data. GIFs are compressed for the README; their playback rate is not a performance benchmark.*
+
+## Small interactions, carefully finished
+
+<p align="center"><img src="docs/images/floating-editor.gif" width="320" alt="Work and rest islands expand into floating duration editors with a progressively blurred backdrop"></p>
+
+Click **Work** or **Rest** and that island expands into a floating duration editor. The background blurs in gently, the time wheels stay crisp, and the sheet settles into place in **190 ms**.
+
+- **Click the ring** to open or close the menu; **left-drag it** to move it, including while the card is open.
+- The launcher follows the active Codex window. Rounded islands keep the tools close at hand.
+- Hover light, elastic button feedback and a damped statistics selector add a little tactile polish.
+- Codex's light/dark appearance and palette are followed automatically; transparency is adjustable from **0–90%**.
+- Animation preferences are respected; hidden cards stop their lighting animation.
 
 <table>
-<tr><th>Lower transparency · 15%</th><th>Higher transparency · 75%</th></tr>
-<tr><td><img src="docs/images/glass-15.png" width="280" alt="Lower transparency · 15%"></td><td><img src="docs/images/glass-75.png" width="280" alt="Higher transparency · 75%"></td></tr>
+<tr><th>Dark glass</th><th>Light glass</th></tr>
+<tr><td><img src="docs/images/showcase-timer-dark.png" width="280" alt="Current timer in dark mode"></td><td><img src="docs/images/showcase-timer-light.png" width="280" alt="Current timer in light mode"></td></tr>
 </table>
 
-*Captured against the same demonstration backdrop with system blur disabled (translucent fallback). Background blur depends on Windows composition support and system transparency settings; its appearance also varies with the background.*
+## Useful while you're making things
 
-## Choose your reminder sound
+| Tool | What it does |
+| --- | --- |
+| Work / rest timer | Set each phase from **1 second to 24 hours**. Run **1–99 groups** of work → rest, with pause, resume and reset. |
+| Reminder sound | Enable reminders, choose your own WAV / MP3, preview it, or use the system sound. |
+| Activity statistics | A **13-week heatmap**, daily session timelines, and separate work/rest totals by day, week and month. |
+| Context meter | Current chat usage inside the launcher; orange at 80%, red at 90%, with one threshold reminder per chat. [Compatibility](CONTEXT.md) |
 
-In **Settings → Sound**, toggle reminders, choose a custom WAV / MP3 file, preview it, or restore the system default.
+Closing the menu keeps the timer running. After sleep or restart, it catches up using its absolute deadline; reminders cannot sound while the app is closed or Windows is asleep. Statistics use actual timer records and exclude paused time.
 
-<p align="center"><img src="docs/images/sound-en.png" width="300" alt="Reminder sound toggle, audio selection and preview"></p>
+## Install and take your first break
 
-## Work and rest in configurable groups
-
-- Set work and rest separately, from **1 second to 24 hours** per phase, using hour/minute/second wheels.
-- A group is **work → rest**. Run one group by default, or choose **1–99 groups**, then wait for the next start.
-- Circular progress shows the phase, remaining time and group count. Pause, resume or reset at any time.
-- Closing the panel keeps the timer running. After sleep or an application restart, it catches up using its absolute deadline. Reminders cannot play while the application is closed or Windows is asleep.
-
-## Install and get started
-
-1. [Download the ZIP](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip), or use **Code → Download ZIP**.
+1. Open the **[latest release](https://github.com/originnal090/codex-mini-menu/releases/latest)** and download `CodexMiniMenu-Windows-2.17.0.zip`.
 2. Extract the entire archive and run **`install.cmd`**.
-3. Open the **Codex Mini Menu** desktop shortcut. The tray menu also provides open, position reset and exit actions.
+3. Open the **Codex Mini Menu** desktop shortcut, set your work/rest times, and get started!
 
-The installer registers the local Codex plugin and creates shortcuts. Upgrading preserves state and preferences. Requires .NET Framework 4.8; no Node.js or Python runtime is needed. Run `uninstall.cmd` to uninstall.
+The installer registers the local Codex plugin and creates shortcuts. Upgrades preserve state and preferences. Requires .NET Framework 4.8; no Node.js or Python runtime is needed to run the menu. The tray provides open, reset-position and exit actions; run `uninstall.cmd` to uninstall.
 
-State, appearance, sound preferences and history are stored locally in `%USERPROFILE%\.codex\timer-data`.
+State, history, appearance and sound preferences stay in `%USERPROFILE%\.codex\timer-data`. Windows backdrop blur depends on composition support and system transparency settings.
 
-## Build and verify
+## Recent milestones, saved
+
+From floating islands to reflective motion, faster editors and synchronized rotating glass: **[the changelog](CHANGELOG.md)** records the major updates, with version tags preserving their source snapshots.
+
+The 2.17.0 validation covered **4,683 data and desktop assertions**, including native mouse dragging. On the measured 240 Hz / DPI 1.5 setup, tilt reached **99.3 updates/s** and dragging **108.5 updates/s** with lighting enabled. These are application/render updates, not independent GPU-presented FPS. [Measurements and design](docs/rotating-glass-2.17.0.md)
+
+## Build, contribute, make it better
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-cycle.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-stats.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-work-rest.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/package.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action TestUI
+powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action Package
 ```
 
-Run these commands in Windows PowerShell. Packages are generated under `dist/`; UI tests require an interactive Windows desktop. Implementation lives in `source/src/`, tests in `source/tests/`, and build/verification scripts in `source/scripts/`.
+Open `CodexMiniMenu.code-workspace` to develop. UI checks need an interactive Windows desktop. [Development guide](docs/development.md) · [Demo rendering](docs/showcase.md)
 
-## Contribute
+Have an idea for a useful little tool, a nicer interaction, or something that feels off? **[Tell me!](https://github.com/originnal090/codex-mini-menu/issues)** Pull requests are welcome with a short explanation and validation details.
 
-Share suggestions and bugs through [Issues](https://github.com/originnal090/codex-mini-menu/issues), or fork the repository and open a pull request with the behavior change and validation details for maintainer review.
-
-## Fonts and licensing
-
-The interface uses Microsoft YaHei and Roboto. Roboto’s license is included in [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt); a project source license has not yet been selected. This is an independent community project for use with Codex.
+The interface uses Microsoft YaHei and Roboto. Roboto's license is included in [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt); a project source license has not yet been selected. This is an independent community project for use with Codex.

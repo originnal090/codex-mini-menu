@@ -43,7 +43,7 @@ namespace RingTimer {
       tokens["GlassEdge"].Set(Alpha(Colors.White,(byte)(IsDark?58:210)));
       tokens["GlassBottom"].Set(Alpha(IsDark?Colors.White:Colors.Black,(byte)(IsDark?15:25)));
       tokens["GlassControl"].Set(Alpha(IsDark?Colors.White:Colors.Black,(byte)(IsDark?16:10)));
-      tokens["GlassSelected"].Set(Alpha(IsDark?Colors.White:Colors.White,(byte)(IsDark?38:195)));
+      tokens["GlassSelected"].Set(Alpha(IsDark?Colors.White:Colors.White,(byte)(IsDark?38:195)));RefreshIslands();
     }
     public static Brush GlassRim(){var b=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.7,1)};
       var top=new GradientStop{Offset=0};var bottom=new GradientStop{Offset=1};
@@ -59,7 +59,7 @@ namespace RingTimer {
     public AppearancePanel(AppearanceSettings preferences){settings=preferences;
       Loaded+=(s,e)=>{settings.Changed+=UpdateValue;UpdateValue();};Unloaded+=(s,e)=>settings.Changed-=UpdateValue;
       var intro=Theme.Text("让背景透过玻璃",18,Theme.Foreground);intro.TextWrapping=TextWrapping.Wrap;intro.FontWeight=FontWeights.SemiBold;intro.Margin=new Thickness(0,8,0,8);Children.Add(intro);
-      var description=Theme.Text("小菜单、计时器与悬浮按钮共用此设置。",12,Theme.Muted);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,24);Children.Add(description);
+      var description=Theme.Text("小菜单、计时器与悬浮按钮共用此设置。",12,Theme.Muted);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,0);Children.Add(description);
       var row=new Grid();row.Children.Add(Theme.Text("玻璃透明度",14,Theme.Foreground));value=Theme.Text("",14,Theme.Foreground);value.HorizontalAlignment=HorizontalAlignment.Right;row.Children.Add(value);Children.Add(row);
       Transparency=new Slider{Minimum=0,Maximum=90,Value=settings.Transparency,TickFrequency=1,IsSnapToTickEnabled=true,SmallChange=1,LargeChange=10,Height=44,Margin=new Thickness(0,10,0,0),Foreground=Theme.Foreground,FocusVisualStyle=Theme.FocusRing,IsMoveToPointEnabled=true};L.Bind(Transparency,AutomationProperties.NameProperty,"玻璃透明度，百分比");
       Transparency.Template=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type Slider}'>
@@ -71,8 +71,9 @@ namespace RingTimer {
           </Track></Grid></ControlTemplate>");
       Transparency.Resources["GlassControl"]=Theme.GlassControl;Transparency.Resources["Ink"]=Theme.Foreground;Transparency.Resources["Thumb"]=Theme.SwitchThumb;Children.Add(Transparency);
       var ends=new Grid();ends.Children.Add(Theme.Text("厚实",11,Theme.Muted));var clear=Theme.Text("通透",11,Theme.Muted);clear.HorizontalAlignment=HorizontalAlignment.Right;ends.Children.Add(clear);Children.Add(ends);
-      var reset=Theme.Button("恢复默认透明度",false);reset.Background=Theme.GlassControl;reset.Height=44;reset.Margin=new Thickness(0,24,0,0);reset.Click+=(s,e)=>Transparency.Value=42;Children.Add(reset);
-      hint=Theme.Text("",12,Theme.Muted);hint.MinHeight=40;hint.Margin=new Thickness(0,24,0,0);hint.TextWrapping=TextWrapping.Wrap;Children.Add(hint);
+      var reset=Theme.Button("恢复默认透明度",false);reset.Height=44;reset.Margin=new Thickness(0,14,0,0);reset.Click+=(s,e)=>Transparency.Value=42;Children.Add(reset);
+      hint=Theme.Text("",12,Theme.Muted);hint.MinHeight=40;hint.Margin=new Thickness(0,14,0,0);hint.TextWrapping=TextWrapping.Wrap;Children.Add(hint);
+      Theme.GroupIsland(this,0,2,new Thickness(16)).Margin=new Thickness(0,0,0,14);Theme.GroupIsland(this,1,3,new Thickness(16));
       Transparency.ValueChanged+=(s,e)=>{settings.Transparency=(int)Math.Round(Transparency.Value);UpdateValue();};UpdateValue();
     }
     void UpdateValue(){value.Text=settings.Transparency+"%";L.Bind(hint,TextBlock.TextProperty,settings.SaveFailed?"当前设置已生效，暂时无法保存。":GlassBackdrop.SystemTransparencyEnabled()?"外观自动跟随 Codex，调整即时生效。":"外观跟随 Codex。系统毛玻璃已关闭，当前使用透明材质。");}
@@ -87,13 +88,27 @@ namespace RingTimer {
     [DllImport("gdi32.dll")]static extern bool DeleteObject(IntPtr value);
     [DllImport("gdi32.dll")]static extern IntPtr CreateEllipticRgn(int left,int top,int right,int bottom);
     [DllImport("gdi32.dll")]static extern int CombineRgn(IntPtr destination,IntPtr first,IntPtr second,int mode);
+    [StructLayout(LayoutKind.Sequential)]struct RegionPoint{public int X,Y;public RegionPoint(Point p){X=(int)Math.Round(p.X);Y=(int)Math.Round(p.Y);}}
+    [DllImport("gdi32.dll")]static extern IntPtr CreatePolygonRgn(RegionPoint[] points,int count,int mode);
     [DllImport("user32.dll")]static extern int SetWindowRgn(IntPtr window,IntPtr region,bool redraw);
-    public static void MorphShape(IntPtr window,Rect bounds,int radius,Rect hole){IntPtr region=CreateRoundRectRgn((int)bounds.Left,(int)bounds.Top,(int)bounds.Right+1,(int)bounds.Bottom+1,radius*2,radius*2);if(region==IntPtr.Zero)return;
+    [DllImport("gdi32.dll")]static extern IntPtr CreateRectRgn(int left,int top,int right,int bottom);
+    public static void SuppressShape(IntPtr window){IntPtr region=CreateRectRgn(0,0,0,0);if(region!=IntPtr.Zero&&SetWindowRgn(window,region,true)==0)DeleteObject(region);}
+    public static void ProjectedShape(IntPtr window,Point[] outline,Rect hole,Point[] extension=null){
+      var points=new RegionPoint[outline.Length];for(int i=0;i<points.Length;i++)points[i]=new RegionPoint(outline[i]);
+      IntPtr region=CreatePolygonRgn(points,points.Length,1);if(region==IntPtr.Zero)return;
+      if(extension!=null){var extra=new RegionPoint[extension.Length];for(int i=0;i<extra.Length;i++)extra[i]=new RegionPoint(extension[i]);IntPtr added=CreatePolygonRgn(extra,extra.Length,1);if(added!=IntPtr.Zero){CombineRgn(region,region,added,2);DeleteObject(added);}}
+      // The launcher is an independent screen-space anchor, so its cutout stays
+      // aligned with that launcher while only the outer card contour tilts.
+      if(!hole.IsEmpty){IntPtr cut=CreateEllipticRgn((int)hole.Left,(int)hole.Top,(int)hole.Right+1,(int)hole.Bottom+1);if(cut!=IntPtr.Zero){CombineRgn(region,region,cut,4);DeleteObject(cut);}}
+      if(SetWindowRgn(window,region,true)==0)DeleteObject(region);
+    }
+    public static void MorphShape(IntPtr window,Rect bounds,int radius,Rect hole,Rect extension=default(Rect)){IntPtr region=CreateRoundRectRgn((int)bounds.Left,(int)bounds.Top,(int)bounds.Right+1,(int)bounds.Bottom+1,radius*2,radius*2);if(region==IntPtr.Zero)return;
+      if(!extension.IsEmpty&&extension.Width>0&&extension.Height>0){IntPtr added=CreateEllipticRgn((int)extension.Left,(int)extension.Top,(int)extension.Right+1,(int)extension.Bottom+1);if(added!=IntPtr.Zero){CombineRgn(region,region,added,2);DeleteObject(added);}}
       if(!hole.IsEmpty){IntPtr cut=CreateEllipticRgn((int)hole.Left,(int)hole.Top,(int)hole.Right+1,(int)hole.Bottom+1);if(cut!=IntPtr.Zero){CombineRgn(region,region,cut,4);DeleteObject(cut);}}
       if(SetWindowRgn(window,region,true)==0)DeleteObject(region);
     }
     public static void Shape(IntPtr window,int width,int height,double scale,bool bubble){int inset=bubble?0:(int)Math.Round(8*scale),diameter=(int)Math.Round((bubble?44:2*Theme.MenuRadius)*scale);if(width<=2*inset||height<=2*inset)return;IntPtr region=CreateRoundRectRgn(inset,inset,width-inset+1,height-inset+1,diameter,diameter);if(region!=IntPtr.Zero&&SetWindowRgn(window,region,true)==0)DeleteObject(region);}
     internal static bool SystemTransparencyEnabled(){try{using(var key=Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")){return key==null||Convert.ToInt32(key.GetValue("EnableTransparency",1))!=0;}}catch{return false;}}
-    public static bool Enable(IntPtr window){if(!SystemTransparencyEnabled())return false;IntPtr memory=IntPtr.Zero;try{var accent=new Accent{State=3};memory=Marshal.AllocHGlobal(Marshal.SizeOf(accent));Marshal.StructureToPtr(accent,memory,false);var data=new Composition{Attribute=19,Data=memory,Size=Marshal.SizeOf(accent)};return SetWindowCompositionAttribute(window,ref data)!=0;}catch(EntryPointNotFoundException){return false;}finally{if(memory!=IntPtr.Zero)Marshal.FreeHGlobal(memory);}}
+    public static bool Enable(IntPtr window,bool enabled=true){if(enabled&&!SystemTransparencyEnabled())return false;IntPtr memory=IntPtr.Zero;try{var accent=new Accent{State=enabled?3:0};memory=Marshal.AllocHGlobal(Marshal.SizeOf(accent));Marshal.StructureToPtr(accent,memory,false);var data=new Composition{Attribute=19,Data=memory,Size=Marshal.SizeOf(accent)};return SetWindowCompositionAttribute(window,ref data)!=0;}catch(EntryPointNotFoundException){return false;}finally{if(memory!=IntPtr.Zero)Marshal.FreeHGlobal(memory);}}
   }
 }

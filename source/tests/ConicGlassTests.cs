@@ -1,0 +1,31 @@
+using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Runtime.InteropServices;using System.Windows;using System.Windows.Controls;using System.Windows.Media;using System.Windows.Media.Imaging;using System.Windows.Threading;using RingTimer;
+class ConicGlassTests {
+ static int checks,failures;
+ static void Check(bool ok,string message){checks++;if(!ok)failures++;Console.WriteLine((ok?"PASS ":"FAIL ")+message);}
+ static void Pump(int ms){var f=new DispatcherFrame();var t=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(ms)};t.Tick+=(s,e)=>{t.Stop();f.Continue=false;};t.Start();Dispatcher.PushFrame(f);}
+ static IEnumerable<T> All<T>(DependencyObject n) where T:DependencyObject {if(n is T)yield return (T)n;for(int i=0;i<VisualTreeHelper.GetChildrenCount(n);i++)foreach(var x in All<T>(VisualTreeHelper.GetChild(n,i)))yield return x;}
+ [DllImport("gdi32.dll")]static extern IntPtr CreateRectRgn(int l,int t,int r,int b);
+ [DllImport("user32.dll")]static extern int GetWindowRgn(IntPtr w,IntPtr r);
+ [DllImport("gdi32.dll")]static extern bool PtInRegion(IntPtr r,int x,int y);
+ [DllImport("gdi32.dll")]static extern bool DeleteObject(IntPtr r);
+ static bool Contains(MenuWindow m,int x,int y){var r=CreateRectRgn(0,0,0,0);try{GetWindowRgn(m.Handle,r);return PtInRegion(r,x,y);}finally{DeleteObject(r);}}
+ static RenderTargetBitmap Capture(Visual v,int w,int h){var b=new RenderTargetBitmap(w,h,96,96,PixelFormats.Pbgra32);b.Render(v);return b;}
+ static byte[] Pixel(BitmapSource b,int x,int y){var p=new byte[4];b.CopyPixels(new Int32Rect(x,y,1,1),p,4,0);return p;}
+ static double GlowLevel(BitmapSource b){int h=Math.Min(120,b.PixelHeight),stride=b.PixelWidth*4;var p=new byte[stride*h];b.CopyPixels(new Int32Rect(0,b.PixelHeight-h,b.PixelWidth,h),p,stride,0);double sum=0;for(int i=0;i<p.Length;i+=4)sum+=p[i]+p[i+1]+p[i+2];return sum/(p.Length/4*3);}
+ static void Save(BitmapSource b,string path){var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(b));using(var stream=File.Create(path))encoder.Save(stream);}
+ [STAThread]static int Main(string[] args){Native.SetProcessDPIAware();var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};MenuWindow m=null;Bubble b=null;Window preview=null;try{
+ Directory.CreateDirectory(args[0]);Theme.Apply(true,null,null,null);var timer=new TimerFeature(new TimerEngine(new TimerState(),()=>DateTime.UtcNow),()=>{});m=new MenuWindow(new FeatureRegistry(timer,new StatsFeature(new StatsStore(null))),()=>{},()=>{}){Left=60,Top=30,AnimationsEnabled=false};m.OpenFeature("timer");m.Reveal();Pump(350);b=new Bubble();b.Show();m.Launcher=b;m.AnchorBounds=()=>b.PixelBounds;MenuApplication.PlacePanel(b,m,-1);m.RestoreCardContour();Pump(100);
+ var mr=m.PixelBounds;var br=b.PixelBounds;Check(Contains(m,br.Left+br.Width/2-mr.Left,br.Top+br.Height/2-mr.Top),"glass card occupies the native region beneath the docked launcher");
+ Check(Pixel(Capture((Visual)b.Content,44,44),7,22)[3]<4,"docked launcher face transmits the underlying card material");
+ m.CardPresenter.Begin(new Point(180,200));Check(Pixel(Capture((Visual)b.Content,44,44),7,22)[3]<4,"projected launcher retains the same transparent face");m.CardPresenter.Release();Pump(80);
+ Check(Pixel(Capture((Visual)b.Content,44,44),7,22)[3]<4,"return retains the docked glass material");m.HideImmediately();Pump(50);Check(Pixel(Capture((Visual)b.Content,44,44),7,22)[3]>50,"standalone launcher restores its own glass surface");m.Reveal();Pump(80);
+ var area=System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+ foreach(string edge in new[]{"left","right","top","bottom"}){br=b.PixelBounds;b.MovePixels(edge=="left"?area.Left:edge=="right"?area.Right-br.Width:area.Right-160,edge=="top"?area.Top:edge=="bottom"?area.Bottom-br.Height:area.Bottom-160);m.Above=edge!="top";MenuApplication.PlacePanel(b,m,m.Above?-1:1);m.RestoreCardContour();Pump(70);br=b.PixelBounds;mr=m.PixelBounds;int x=br.Left+(edge=="left"?3:edge=="right"?br.Width-3:br.Width/2)-mr.Left,y=br.Top+(edge=="top"?3:edge=="bottom"?br.Height-3:br.Height/2)-mr.Top;double dpi=Native.ScaleFor(m.Handle);Check(Contains(m,x,y),edge+" edge keeps the complete launcher inside the glass region");Check(Pixel(Capture(m,(int)Math.Ceiling(m.ActualWidth),(int)Math.Ceiling(m.ActualHeight)),(int)(x/dpi),(int)(y/dpi))[3]>50,edge+" edge paints glass beneath the outer launcher arc");}
+ var layer=new CardAtmosphere{Width=352,Height=610};preview=new Window{Content=layer,Width=352,Height=610,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,ShowInTaskbar=false,Left=-2200,Top=0};preview.Show();Pump(80);
+ var border=All<Border>(layer).FirstOrDefault(x=>x.BorderBrush is ImageBrush);Check(border!=null,"border consumes an angular color texture");if(border!=null){var texture=(BitmapSource)((ImageBrush)border.BorderBrush).ImageSource;int n=texture.PixelWidth;var inner=Pixel(texture,n*5/8,n*5/8);var outer=Pixel(texture,n*7/8,n*7/8);Check(inner.Zip(outer,(x,y)=>Math.Abs(x-y)).Max()<4,"conic color remains constant along the same angular ray");var opposite=Pixel(texture,n/8,n/8);Check(outer.Zip(opposite,(x,y)=>Math.Abs(x-y)).Sum()>60,"conic color varies around the center");}
+ layer.SetMotion(true);Pump(60);var phase=(RotateTransform)((ImageBrush)border.BorderBrush).Transform;double startAngle=phase.Angle;Save(Capture(layer,352,610),Path.Combine(args[0],"field-start.png"));Pump(450);Save(Capture(layer,352,610),Path.Combine(args[0],"field-turn.png"));Check(phase.Angle-startAngle>5,"angular lighting advances continuously");
+ layer.SetMotion(false);Pump(30);var stopped=Capture(layer,352,610);Pump(250);Check(Math.Abs(GlowLevel(Capture(layer,352,610))-GlowLevel(stopped))<.05,"reduced motion holds the lighting steady");
+ Theme.Snapshot(m,Path.Combine(args[0],"card-rest.png"),1.5);m.CardPresenter.Begin(new Point(180,200));m.CardPresenter.Move(new Point(300,70));Pump(250);Theme.Snapshot(m,Path.Combine(args[0],"card-tilt.png"),1.5);m.CardPresenter.Release();
+ Console.WriteLine(checks+" conic/glass checks, "+failures+" failures");return failures==0?0:1;
+ }catch(Exception e){Console.WriteLine(e);return 1;}finally{if(preview!=null)preview.Close();if(m!=null){m.Disposing=true;m.Close();}if(b!=null)b.Close();app.Shutdown();}}
+}

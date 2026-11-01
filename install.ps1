@@ -16,7 +16,7 @@ if (Test-Path -LiteralPath (Join-Path $destination $exeRelative)) {
 }
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 if ($source -ne [IO.Path]::GetFullPath($destination)) {
-  foreach ($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md')) {
+  foreach ($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md','README.zh-CN.md','CHANGELOG.md','CONTEXT.md','docs')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $destination -Recurse -Force
   }
 }
@@ -29,7 +29,7 @@ foreach ($folder in @([Environment]::GetFolderPath('Desktop'),[Environment]::Get
   if ((Test-Path -LiteralPath $path) -and $link.TargetPath -ne $exe) {
     $previousRoot=Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $link.TargetPath))
     $previousMarker=Join-Path $previousRoot 'ring-timer-install.json'
-    if(-not (Test-Path -LiteralPath $previousMarker) -or (Get-Content -LiteralPath $previousMarker -Raw | ConvertFrom-Json).name -ne 'Codex Ring Timer Lite'){throw "Shortcut belongs to another application: $path"}
+    if(-not (Test-Path -LiteralPath $previousMarker) -or (Get-Content -LiteralPath $previousMarker -Raw -Encoding UTF8 | ConvertFrom-Json).name -ne 'Codex Ring Timer Lite'){throw "Shortcut belongs to another application: $path"}
   }
   $link.TargetPath=$exe;$link.Arguments='--open';$link.WorkingDirectory=(Split-Path -Parent $exe);$link.IconLocation=(Join-Path $destination 'plugin\assets\icon.ico');$link.Description='Codex Mini Menu';$link.Save();$shortcuts+=$path
   $legacy=Join-Path $folder 'Codex Ring Timer.lnk'
@@ -48,8 +48,8 @@ if ($codex) {
     $registered=($LASTEXITCODE -eq 0)
   }
 }
-$version=(Get-Content -LiteralPath (Join-Path $destination 'plugin\.codex-plugin\plugin.json') -Raw | ConvertFrom-Json).version
-$marker=[ordered]@{name='Codex Ring Timer Lite';displayName='Codex Mini Menu';version=$version;directory=$destination;shortcuts=$shortcuts;pluginRegistered=$registered;codexCommand=$codex;modules=@('timer')}
+$version=(Get-Content -LiteralPath (Join-Path $destination 'plugin\.codex-plugin\plugin.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+$marker=[ordered]@{name='Codex Ring Timer Lite';displayName='Codex Mini Menu';version=$version;directory=$destination;shortcuts=$shortcuts;pluginRegistered=$registered;codexCommand=$codex;modules=@('timer','stats','context')}
 $marker | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $destination 'ring-timer-install.json') -Encoding UTF8
 if (-not $NoLaunch){Start-Process -FilePath $exe -WindowStyle Hidden}
 Write-Output "Installed: $destination"

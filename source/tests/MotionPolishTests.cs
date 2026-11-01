@@ -1,0 +1,21 @@
+using System;using System.IO;using System.Linq;using System.Reflection;using System.Collections.Generic;using System.Diagnostics;using System.Runtime.InteropServices;using System.Windows;using System.Windows.Controls;using System.Windows.Media;using System.Windows.Threading;using RingTimer;
+class MotionPolishTests {
+ static int checks,failures;
+ static void Check(bool ok,string label){checks++;if(!ok)failures++;Console.WriteLine((ok?"PASS ":"FAIL ")+label);}
+ static void Pump(int ms){var f=new DispatcherFrame();var t=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(ms)};t.Tick+=(s,e)=>{t.Stop();f.Continue=false;};t.Start();Dispatcher.PushFrame(f);}
+ static IEnumerable<T> All<T>(DependencyObject n) where T:DependencyObject{if(n is T)yield return (T)n;for(int i=0;i<VisualTreeHelper.GetChildrenCount(n);i++)foreach(var v in All<T>(VisualTreeHelper.GetChild(n,i)))yield return v;}
+ static double Lift(MenuWindow m){var film=(SilverCardFilm)typeof(SilverCardPresenter).GetField("film",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(m.CardPresenter);return (double)typeof(SilverCardFilm).GetField("lift",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(film);}
+ [DllImport("gdi32.dll")]static extern IntPtr CreateRectRgn(int l,int t,int r,int b);
+ [DllImport("user32.dll")]static extern int GetWindowRgn(IntPtr w,IntPtr r);
+ [DllImport("gdi32.dll")]static extern bool DeleteObject(IntPtr r);
+ static int Region(Bubble b){IntPtr r=CreateRectRgn(0,0,0,0);try{return GetWindowRgn(b.Handle,r);}finally{DeleteObject(r);}}
+ [STAThread]static int Main(string[] args){Native.SetProcessDPIAware();var app=new Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};MenuWindow m=null;Bubble b=null;var settings=new AppearanceSettings(null);try{
+ Directory.CreateDirectory(args[0]);Theme.Apply(true,null,null,null);var timer=new TimerFeature(new TimerEngine(new TimerState(),()=>DateTime.UtcNow),()=>{});m=new MenuWindow(new FeatureRegistry(timer,new StatsFeature(new StatsStore(null))),()=>{},()=>{},settings){Left=60,Top=30,AnimationsEnabled=false};m.OpenFeature("timer");m.Reveal();Pump(400);m.AnimationsEnabled=true;
+ timer.Panel.OpenEditor("work");Pump(240);var root=(Grid)timer.Panel.Surface;var editor=root.Children.OfType<Border>().Single(x=>All<DurationWheel>(x).Any());var transform=(TransformGroup)editor.RenderTransform;Check(Math.Abs(((ScaleTransform)transform.Children[0]).ScaleY-1)<.0001,"duration lift is fully settled by 240 ms");timer.Panel.CancelEditor();Pump(350);
+ var card=m.CardPresenter;card.Begin(new Point(180,200));Check(Lift(m)<.01,"press starts at the resting reflection intensity");Pump(55);double before=Lift(m);Check(before>0&&before<.9,"reflection ramps instead of snapping on");card.Release();Pump(20);Check(Lift(m)<=before+.08,"quick release never jumps up to full reflection");Pump(420);Check(!card.IsPresenting&&Lift(m)<.001,"return finishes at the resting reflection intensity");
+ b=new Bubble();b.Show();var bounds=m.PixelBounds;var ring=b.PixelBounds;double dpi=Native.ScaleFor(m.Handle);b.MovePixels(bounds.Right-(int)(8*dpi)-ring.Width,bounds.Bottom-(int)(8*dpi)-ring.Height);m.Launcher=b;m.AnchorBounds=()=>b.PixelBounds;m.RestoreCardContour();Pump(100);card.Begin(new Point(180,200));Pump(50);Check(b.Opacity==1,"tilt keeps launcher window composition opacity unchanged");Check(Region(b)==1,"native launcher is clipped while its live copy turns");card.Move(new Point(320,80));Pump(220);card.Release();Pump(450);Check(Region(b)>1&&b.Opacity==1&&b.IsHitTestVisible,"return restores native launcher and input");
+ for(int i=0;i<5;i++){card.Begin(new Point(180,200));Pump(15);card.Release();Pump(15);m.HideImmediately();m.Reveal();}Pump(380);Check(Region(b)>1&&b.IsHitTestVisible&&!card.IsPresenting,"interrupted returns restore launcher without stale handoffs");
+ Theme.Snapshot(m,Path.Combine(args[0],"dark.png"),dpi);Theme.Apply(false,null,null,null);Pump(250);Theme.Snapshot(m,Path.Combine(args[0],"light.png"),dpi);
+ Console.WriteLine(checks+" checks, "+failures+" failures");return failures==0?0:1;
+ }catch(Exception e){Console.WriteLine(e);return 1;}finally{if(m!=null){m.Disposing=true;m.Close();}if(b!=null)b.Close();settings.Dispose();app.Shutdown();}}
+}

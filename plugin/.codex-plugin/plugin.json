@@ -1,13 +1,13 @@
 {
   "name": "codex-ring-timer",
-  "version": "2.10.2",
-  "description": "Windows 小菜单：跟随 Codex 的悬浮功能入口，已安装计时器与统计模块。",
+  "version": "2.17.0",
+  "description": "Windows 小菜单：跟随 Codex 的悬浮功能入口，内置计时、统计与当前对话上下文占比。",
   "skills": "./skills/",
   "requires_local_executor": true,
   "interface": {
     "displayName": "小菜单",
     "shortDescription": "点击圆环打开功能菜单",
-    "longDescription": "Windows 悬浮小菜单，跟随 Codex，可拖动定位。内置工作／休息循环计时、环形进度、分组执行与分类统计。",
+    "longDescription": "Windows 悬浮小菜单，跟随 Codex，可拖动定位。内置工作／休息计时、分类统计和上下文占比，80% 变橙、90% 变红并提醒一次。",
     "category": "Productivity",
     "brandColor": "#B8B8B8",
     "defaultPrompt": [

@@ -1,0 +1,18 @@
+{
+  "folders": [{ "name": "Codex Mini Menu", "path": "." }],
+  "settings": {
+    "files.encoding": "utf8",
+    "files.exclude": { "**/source/bin": true, "**/source/artifacts": true, "**/dist": true, "**/backup*": true },
+    "search.exclude": { "**/source/bin": true, "**/source/artifacts": true, "**/dist": true, "**/backup*": true }
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      { "label": "Menu: check environment", "type": "process", "command": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/dev.ps1", "-Action", "Check"], "problemMatcher": [] },
+      { "label": "Menu: build", "type": "process", "command": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/dev.ps1", "-Action", "Build"], "group": { "kind": "build", "isDefault": true }, "problemMatcher": "$msCompile" },
+      { "label": "Menu: test", "type": "process", "command": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/dev.ps1", "-Action", "Test"], "group": { "kind": "test", "isDefault": true }, "problemMatcher": "$msCompile" },
+      { "label": "Menu: test desktop UI", "type": "process", "command": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/dev.ps1", "-Action", "TestUI"], "problemMatcher": "$msCompile" },
+      { "label": "Menu: package", "type": "process", "command": "powershell.exe", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/dev.ps1", "-Action", "Package"], "problemMatcher": "$msCompile" }
+    ]
+  }
+}
