@@ -1,8 +1,8 @@
-# Codex Mini Menu
+# Codex Mini Menu — Windows Timer & Break Reminder
 
 **Build something great. Remember to get out of your chair.**
 
-A little glass companion for Codex on Windows: work/rest reminders, a floating launcher, live reflective card motion, and two soft colors orbiting through the background and border.
+A floating desktop timer and break reminder for Codex on Windows. Set a countdown or a customizable Pomodoro-style work/rest cycle, track your focus time, and keep an eye on chat context usage. Its glass card tilts with live reflections while two soft colors orbit through the background and border.
 
 **English** · [简体中文](README.zh-CN.md) · **[Download v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [What's new](CHANGELOG.md) · [Ideas & feedback](https://github.com/originnal090/codex-mini-menu/issues)
 

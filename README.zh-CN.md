@@ -1,8 +1,8 @@
-# Codex 小菜单
+# Codex 小菜单 · Windows 悬浮计时器与休息提醒
 
 **专注写代码，也记得站起来！**
 
-一个陪在 Codex 身边的 Windows 玻璃小插件：工作／休息提醒、悬浮圆环、可以倾斜把玩的银色闪卡，还有围绕卡片中心旋转的冷暖柔光。
+一个陪在 Codex 身边的 Windows 悬浮计时器：支持工作／休息倒计时、自定义番茄钟式专注循环、定时休息提醒、专注时间统计与聊天上下文占用。还有可以倾斜把玩的银色闪卡，以及围绕卡片中心旋转、与边框同步变色的冷暖模糊柔光。
 
 [English](README.md) · **简体中文** · **[下载 v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [更新记录](CHANGELOG.md) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
 
