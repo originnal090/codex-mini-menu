@@ -1,119 +1,87 @@
 # Codex 小菜单
 
-**2.17.0：中心旋转柔光。** 冷暖两束模糊柔光环绕卡片中心，整张背景与锥形渐变边框共用颜色场和旋转角度，约 12 秒一圈。[设计与验证](docs/rotating-glass-2.17.0.md)
+**专注写代码，也记得站起来！**
 
-**2.15.0：流畅浮岛与主题光效。** 时长浮岛上浮由 380 ms 缩短至 190 ms，精简单位行并重新安排间距。右键倾斜采用连续反光与圆环交接，卡片增加主题冷暖渐变描边和底部呼吸弥散光。[说明与验证](docs/motion-polish-2.15.0.md)
+一个陪在 Codex 身边的 Windows 玻璃小插件：工作／休息提醒、悬浮圆环、可以倾斜把玩的银色闪卡，还有围绕卡片中心旋转的冷暖柔光。
 
-工作和休息时长浮岛现在从点击位置展开为毛玻璃编辑面板，背景模糊由 0 平滑增加，关闭时收回原位。[交互说明](docs/duration-float.md)
+[English](README.md) · **简体中文** · **[下载 v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [更新记录](CHANGELOG.md) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
 
-<p align="center"><img src="docs/images/duration-float.gif" width="320" alt="工作和休息时长浮岛展开为渐进模糊的毛玻璃面板"></p>
+Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English
 
-**2.14.1：返回按钮位置修正。** 返回胶囊与圆环水平对齐，左侧弧线与卡片圆角同心，上下展开保持一致。
+## 为什么做这个小插件？
 
-**2.14.0：圆角与倾斜优化。** 右侧控件与卡片圆角同心，文字绘制保持稳定，圆环跟随整张卡片倾斜。通过反光分层与内容缓存改善动画流畅度。[实测与代价](docs/card-refinement-2.14.0.md)
+和 Codex 聊着聊着，几个小时就过去了。再问一个问题，再改一个功能，再试一个想法……代码越写越起劲，回过神来才发现自己一直没离开椅子，腰都坐酸了。
 
-**2.13.0：银色玻璃闪卡。** 按住右键移动鼠标，整张菜单卡片随之倾斜，银白高光随角度流动；松开后柔和回正，计时保持实时更新。[升级说明](docs/silver-card-2.13.0.md)
+于是我做了这个小菜单：专注时陪你计时，到点提醒你起来走走、伸个懒腰，给自己留一点休息的时间。**项目要好好做，身体也要好好照顾！**
 
-<p align="center"><img src="docs/images/silver-card-rest.png" width="280" alt="银色玻璃卡片"><img src="docs/images/silver-card-tilt.png" width="280" alt="倾斜时的银色反光"></p>
+既然它要每天陪在桌面上，那就让它也好看、好玩一点。玻璃要有层次，光要会流动，卡片要能跟着手里的动作倾斜。一个小工具，也值得认真打磨！
 
-**2.12.0：悬浮岛界面。** 完整玻璃卡片内的导航、计时、统计、上下文与设置采用统一的圆润功能岛，支持小屏幕内容滚动。[改版说明](docs/menu-islands-2.12.0.md)
-
-<p align="center"><img src="docs/images/islands-home.png" width="280" alt="悬浮岛小菜单"><img src="docs/images/islands-timer.png" width="280" alt="悬浮岛计时页面"></p>
-
-2.11.0 新增「上下文」模块：圆环中心显示当前聊天的已用百分比，80% 变橙，90% 变红并提醒一次；切换聊天后自动更新。[功能与兼容性说明](CONTEXT.md)。
-
-**跟随 Codex 的 Windows 悬浮工具菜单。** 从圆环扩散展开，跟随主题切换配色，以银色反光、可调透明度和磨砂玻璃质感融入桌面。内置工作／休息计时与打卡式活动热力图，更多实用工具持续扩展中。
-
-**Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English**
-
-[English](README.md) · **简体中文** · [下载安装](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
-
-## 从圆环展开的小菜单
-
-点击悬浮圆环，菜单从圆环所在位置扩散展开，收起时回到原处。悬浮入口跟随当前 Codex 窗口，也可以自由拖动；进入计时或统计后，左下角可返回菜单。
-
-<p align="center"><img src="docs/images/menu-opening.gif" width="390" alt="小菜单从悬浮圆环展开和收起"></p>
-
-## 跟随 Codex 主题与配色
-
-读取 Codex 的外观配置，自动跟随明暗主题及配色变化。背景、文字、控件和强调色一起调整；切换外观时继续保留当前计时状态。
+## 让一张小卡片，有光、有动作
 
 <table>
-<tr><th>深色主题</th><th>浅色主题</th></tr>
-<tr><td><img src="docs/images/timer-zh-CN.png" width="280" alt="深色主题"></td><td><img src="docs/images/light-zh-CN.png" width="280" alt="浅色主题"></td></tr>
+<tr><th>冷暖模糊光，围绕中心旋转</th><th>按住右键，把玩银色闪卡</th></tr>
+<tr><td><img src="docs/images/rotating-glass.gif" width="320" alt="冷暖模糊背景围绕卡片中心旋转，锥形渐变边框同步变色"></td><td><img src="docs/images/silver-card-live.gif" width="320" alt="整张实时卡片透视倾斜，银色高光随角度流动，松开后柔和回正"></td></tr>
 </table>
 
-## 银色闪卡与细腻的操作反馈
+**光转到哪里，边框就跟到哪里。** 两束来自主题配色的冷暖柔光，以卡片中心为轴持续旋转，约 **12 秒一圈**。整张背景与锥形渐变描边共用颜色场和角度，颜色沿卡片流动，再延伸到对应的边缘；中心柔和淡出，透出玻璃底色。
 
-按住右键移动鼠标时，整张银色玻璃卡片随角度产生流动反光；松开后自动回正。统计滑轨带轻微阻尼，滑块覆盖到的文字即时换色；按钮按下时弹性压缩并出现内阴影，释放后轻微回弹。
+**它真的是一张可以倾斜的闪卡。** 按住 **鼠标右键** 移动，整张菜单随之产生透视倾斜，银白反光跟着角度流过卡面。松开后平滑回正，计时内容保持实时更新，圆环也跟随整张卡片一起倾斜。
 
-<p align="center"><img src="docs/images/interactions.gif" width="489" alt="滑轨阻尼、实时文字换色和按钮回弹"></p>
+*动图由真实 WPF 界面脚本渲染，使用演示数据。动图经过压缩用于展示，播放帧率不代表实际运行性能。*
 
-*系统关闭动画时，松开右键会立即回正。*
+## 好用，也要有一点手感
 
-## 打卡式热力图：看见专注的积累
+<p align="center"><img src="docs/images/floating-editor.gif" width="320" alt="工作与休息功能岛展开为时长浮岛，背景渐进模糊，时间滚轮保持清晰"></p>
 
-热力图根据实际计时记录自动生成。每屏展示 13 周，可切换工作／休息、翻阅历史，并点击日期查看当天分段。总量视图按日、周、月汇总，两类时间使用不同颜色。
+点击 **工作** 或 **休息**，对应功能岛展开为悬浮时长面板。背景模糊渐渐铺开，时间滚轮保持清晰，**190 ms** 完成上浮；关闭后收回计时页面。
+
+- **点击圆环**展开／收起菜单，**按住左键拖动圆环**调整位置；卡片展开后也可以拖。
+- 悬浮入口跟随当前 Codex 窗口，工具以圆润的功能岛组织，随手就能打开。
+- 指针柔光、按钮弹性反馈、带阻尼的统计滑轨，让小动作也有回应。
+- 自动跟随 Codex 明暗主题与配色，透明度可在 **0–90%** 之间调整。
+- 尊重应用和系统动画设置；隐藏卡片后停止光效动画。
 
 <table>
-<tr><th>每日活动热力图</th><th>工作／休息分类统计</th></tr>
-<tr><td><img src="docs/images/heatmap-zh-CN.png" width="280" alt="每日活动热力图"></td><td><img src="docs/images/totals-zh-CN.png" width="280" alt="工作／休息分类统计"></td></tr>
+<tr><th>深色玻璃</th><th>浅色玻璃</th></tr>
+<tr><td><img src="docs/images/showcase-timer-dark.png" width="280" alt="深色主题下的冷暖旋转玻璃计时器"></td><td><img src="docs/images/showcase-timer-light.png" width="280" alt="浅色主题下的玻璃计时器"></td></tr>
 </table>
 
-*统计图片使用演示数据。暂停时间不计入；当前正在进行的时间也会显示，重置会保留已经执行的有效时长。*
+## 漂亮之外，也认真做事
 
-## 可调透明度与磨砂玻璃质感
+| 工具 | 能做什么 |
+| --- | --- |
+| 工作／休息计时 | 每段支持 **1 秒至 24 小时**，按 **1–99 组**工作 → 休息执行，可暂停、继续、重置。 |
+| 提示音 | 随时开关提醒，选择自己的 WAV / MP3、试听，或使用系统默认声音。 |
+| 活动统计 | 查看 **13 周热力图**、每日分段，以及按日／周／月分类的工作与休息总量。 |
+| 上下文圆环 | 查看当前聊天的上下文占用；80% 变橙，90% 变红，每个聊天触发一次阈值提醒。[兼容性](CONTEXT.md) |
 
-在 **设置 → 外观** 中将透明度调到 0–90%，菜单、计时器和悬浮圆环同步生效。半透明填充、渐变边缘与背景模糊形成玻璃层次，让菜单与桌面背景自然融合。
+收起菜单后继续计时。休眠或退出期间无法即时发声提醒，恢复后按绝对截止时间推进到相应阶段或结束。统计来自实际计时记录，不计入暂停时长。
 
-<table>
-<tr><th>较低透明度 · 15%</th><th>较高透明度 · 75%</th></tr>
-<tr><td><img src="docs/images/glass-15.png" width="280" alt="较低透明度 · 15%"></td><td><img src="docs/images/glass-75.png" width="280" alt="较高透明度 · 75%"></td></tr>
-</table>
+## 装好它，给下一次休息留个提醒
 
-*上图在统一的演示背景上实拍；录制环境关闭了系统模糊，显示为半透明表面。背景模糊取决于 Windows 合成能力和系统透明效果设置，具体观感会随桌面背景变化。*
-
-## 提示音由你选择
-
-在 **设置 → 提示音** 中随时开关提醒、选择自己的 WAV / MP3 文件、试听或恢复系统默认音效。
-
-<p align="center"><img src="docs/images/sound-zh-CN.png" width="300" alt="提示音开关、音频文件选择和试听"></p>
-
-## 工作与休息，按组执行
-
-- 工作与休息时长分别设置，每段支持 **1 秒至 24 小时**，通过时／分／秒滚轮调整。
-- 一组包含 **工作 → 休息**。默认执行一组，也可指定 **1–99 组**，最后一组结束后等待再次开始。
-- 环形进度显示阶段、剩余时间和组数，支持暂停、继续与重置。
-- 收起菜单后继续计时。休眠或退出期间不能即时提醒；恢复后按绝对截止时间推进到相应阶段或结束。
-
-## 安装与开始使用
-
-1. 点击 [下载 ZIP](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip)，或使用仓库的 **Code → Download ZIP**。
+1. 前往 **[最新发布页](https://github.com/originnal090/codex-mini-menu/releases/latest)**，下载 `CodexMiniMenu-Windows-2.17.0.zip`。
 2. 完整解压，运行 **`install.cmd`**。
-3. 从桌面快捷方式 **Codex Mini Menu** 打开；也可以通过系统托盘打开菜单、恢复位置或退出。
+3. 打开桌面的 **Codex Mini Menu**，设好工作与休息时长，就可以开始啦！
 
-安装器会注册本地 Codex 插件并创建快捷方式。升级保留计时状态和偏好。运行依赖 .NET Framework 4.8；无需 Node.js 或 Python。卸载请运行 `uninstall.cmd`。
+安装器会注册本地 Codex 插件并创建快捷方式；升级保留计时状态和偏好。需要 .NET Framework 4.8，运行插件无需 Node.js 或 Python。托盘支持打开菜单、恢复位置和退出；卸载请运行 `uninstall.cmd`。
 
-计时状态、外观、声音偏好与历史保存在 `%USERPROFILE%\.codex\timer-data`。
+状态、历史、外观和声音设置保存在本机 `%USERPROFILE%\.codex\timer-data`。Windows 背景模糊取决于合成能力和系统透明效果设置。
 
-## 构建与验证
+## 这几次大更新，都留下来了
 
-打开 `CodexMiniMenu.code-workspace`，或运行 `powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action TestUI`。[开发与发布说明](docs/development.md)
+从悬浮岛界面，到银色闪卡、流畅浮岛，再到背景与边框同步旋转的玻璃光效：**[更新记录](CHANGELOG.md)** 收录每次重大变化，版本标签保留对应源码快照。
+
+2.17.0 完成 **4,683 项数据与桌面检查**，包括真实鼠标拖动。实测 240 Hz／DPI 1.5 环境中，开启光效后倾斜约 **99.3 次更新／秒**，拖动约 **108.5 次更新／秒**。这是应用与渲染更新率，并非独立测得的 GPU 呈现帧率。[设计与实测](docs/rotating-glass-2.17.0.md)
+
+## 一起把它变得更好
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-cycle.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-stats.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/test-work-rest.ps1
-powershell -ExecutionPolicy Bypass -File source/scripts/package.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action TestUI
+powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action Package
 ```
 
-在 Windows PowerShell 中运行。安装包生成在 `dist/`；UI 验证需要交互式 Windows 桌面。源码位于 `source/src/`，测试位于 `source/tests/`，构建与验证脚本位于 `source/scripts/`。
+打开 `CodexMiniMenu.code-workspace` 即可开发。UI 验证需要交互式 Windows 桌面。[开发说明](docs/development.md) · [演示素材生成](docs/showcase.md)
 
-## 参与项目
+想要一个新的小工具？有更舒服的交互点子？或者发现哪里不太对劲？**[欢迎来聊！](https://github.com/originnal090/codex-mini-menu/issues)** 也欢迎提交 Pull Request，带上改动说明与验证结果。
 
-欢迎通过 [Issues](https://github.com/originnal090/codex-mini-menu/issues) 提交建议和问题，或 Fork 后提交 Pull Request，说明改动和验证结果，由维护者审核。
-
-## 字体与许可
-
-界面使用微软雅黑与 Roboto。Roboto 的许可证见 [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt)；项目源码许可证尚未指定。本项目是面向 Codex 的独立社区工具。
+界面使用微软雅黑与 Roboto。Roboto 许可证见 [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt)；项目源码许可证尚未指定。这是面向 Codex 的独立社区工具。

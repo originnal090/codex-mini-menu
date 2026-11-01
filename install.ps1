@@ -16,7 +16,7 @@ if (Test-Path -LiteralPath (Join-Path $destination $exeRelative)) {
 }
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 if ($source -ne [IO.Path]::GetFullPath($destination)) {
-  foreach ($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md','README.zh-CN.md','CONTEXT.md','docs')) {
+  foreach ($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md','README.zh-CN.md','CHANGELOG.md','CONTEXT.md','docs')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $destination -Recurse -Force
   }
 }
