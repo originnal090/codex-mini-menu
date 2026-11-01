@@ -9,6 +9,7 @@ namespace RingTimer {
   // pages are not retained by the language service.
   static class L {
     static readonly Dictionary<string,string> english=new Dictionary<string,string>{
+      {"拖动圆环调整位置 · 按住右键摆动卡片","Drag ring to move · Hold right button to tilt"},
       {"上下文","Context"},{"已用上下文","Context used"},{"等待当前对话数据","Waiting for current chat"},{"暂时无法确认用量","Usage unavailable"},
       {"80% 变橙 · 90% 变红","Orange at 80% · Red at 90%"},{"每个对话达到 90% 时提醒一次","One reminder per chat at 90%"},
       {"上下文即将用满，建议开启新对话。","Context is nearly full. Consider starting a new chat."},{"上下文已超过 80%，可以准备切换对话。","Context has reached 80%. Prepare to start a new chat."},

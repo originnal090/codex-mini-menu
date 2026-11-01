@@ -15,6 +15,7 @@ namespace RingTimer {
     double RevealProgress{get{return (double)GetValue(RevealProgressProperty);}set{SetValue(RevealProgressProperty,value);}}
     protected override void UpdateWindowShape(){UpdateRevealGeometry();}
     void UpdateRevealGeometry(){
+      if(CardPresenter!=null&&CardPresenter.IsPresenting){CardPresenter.UpdateContour();return;}
       if(surface==null||new System.Windows.Interop.WindowInteropHelper(this).Handle==IntPtr.Zero||surface.ActualWidth<=0||surface.ActualHeight<=0)return;
       double scale=Native.ScaleFor(Handle);var window=PixelBounds;var offset=surface.TranslatePoint(new Point(),this);var full=new Rect(0,0,surface.ActualWidth,surface.ActualHeight);
       Native.RECT? anchor=AnchorBounds==null?null:AnchorBounds();Rect hole=Rect.Empty;
@@ -40,6 +41,7 @@ namespace RingTimer {
     }
     public void ClosePanel(){
       if(IsClosing||!IsVisible)return;IsClosing=true;surface.IsHitTestVisible=false;
+      CardPresenter.Reset();
       if(!AnimationsEnabled){HideImmediately();closed();return;}
       AnimateReveal(0,240,()=>{HideImmediately();closed();});
     }

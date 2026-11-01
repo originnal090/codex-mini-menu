@@ -1,12 +1,16 @@
 # Codex 小菜单
 
+**2.13.0：银色玻璃闪卡。** 按住右键移动鼠标，整张菜单卡片随之倾斜，银白高光随角度流动；松开后柔和回正，计时保持实时更新。[升级说明](docs/silver-card-2.13.0.md)
+
+<p align="center"><img src="docs/images/silver-card-rest.png" width="280" alt="银色玻璃卡片"><img src="docs/images/silver-card-tilt.png" width="280" alt="倾斜时的银色反光"></p>
+
 **2.12.0：悬浮岛界面。** 完整玻璃卡片内的导航、计时、统计、上下文与设置采用统一的圆润功能岛，支持小屏幕内容滚动。[改版说明](docs/menu-islands-2.12.0.md)
 
 <p align="center"><img src="docs/images/islands-home.png" width="280" alt="悬浮岛小菜单"><img src="docs/images/islands-timer.png" width="280" alt="悬浮岛计时页面"></p>
 
 2.11.0 新增「上下文」模块：圆环中心显示当前聊天的已用百分比，80% 变橙，90% 变红并提醒一次；切换聊天后自动更新。[功能与兼容性说明](CONTEXT.md)。
 
-**跟随 Codex 的 Windows 悬浮工具菜单。** 从圆环扩散展开，跟随主题切换配色，以鼠标追踪高光、可调透明度和磨砂玻璃质感融入桌面。内置工作／休息计时与打卡式活动热力图，更多实用工具持续扩展中。
+**跟随 Codex 的 Windows 悬浮工具菜单。** 从圆环扩散展开，跟随主题切换配色，以银色反光、可调透明度和磨砂玻璃质感融入桌面。内置工作／休息计时与打卡式活动热力图，更多实用工具持续扩展中。
 
 **Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English**
 
@@ -27,14 +31,13 @@
 <tr><td><img src="docs/images/timer-zh-CN.png" width="280" alt="深色主题"></td><td><img src="docs/images/light-zh-CN.png" width="280" alt="浅色主题"></td></tr>
 </table>
 
-## 鼠标追踪与细腻的操作反馈
+## 银色闪卡与细腻的操作反馈
 
-鼠标移动时，柔和高光随指针在菜单表面移动。统计滑轨带轻微阻尼，滑块覆盖到的文字即时换色；按钮按下时弹性压缩并出现内阴影，释放后轻微回弹。
+按住右键移动鼠标时，整张银色玻璃卡片随角度产生流动反光；松开后自动回正。统计滑轨带轻微阻尼，滑块覆盖到的文字即时换色；按钮按下时弹性压缩并出现内阴影，释放后轻微回弹。
 
-<p align="center"><img src="docs/images/pointer-tracking.gif" width="390" alt="鼠标移动时的表面高光"></p>
 <p align="center"><img src="docs/images/interactions.gif" width="489" alt="滑轨阻尼、实时文字换色和按钮回弹"></p>
 
-*鼠标追踪录像保留实际高光强度，光标标记用于指示录制时的鼠标位置。系统关闭动画时直接显示终态。*
+*系统关闭动画时，松开右键会立即回正。*
 
 ## 打卡式热力图：看见专注的积累
 

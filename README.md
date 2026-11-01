@@ -1,8 +1,12 @@
 # Codex Mini Menu
 
+**2.13.0: Silver glass card.** Hold the right mouse button and move to tilt the entire live menu. Silver highlights follow the angle; release to return smoothly. Timers keep updating throughout. See the [upgrade details](docs/silver-card-2.13.0.md).
+
+<p align="center"><img src="docs/images/silver-card-rest.png" width="280" alt="Silver glass card"><img src="docs/images/silver-card-tilt.png" width="280" alt="Silver reflection while tilting"></p>
+
 Version 2.11.0 adds **Context**: the launcher center follows the current chat's context usage, turns orange at 80% and red at 90%, and shows one reminder per chat. See [module details and compatibility](CONTEXT.md).
 
-**A floating Windows utility menu that follows Codex.** Expand from a circular launcher, match the Codex theme, and enjoy pointer-following highlights, adjustable transparency and a frosted-glass finish. Built-in work/rest timers and a contribution-style activity heatmap help you track your focus, with more tools to come.
+**A floating Windows utility menu that follows Codex.** Expand from a circular launcher, match the Codex theme, and enjoy silver reflections, adjustable transparency and a frosted-glass finish. Built-in work/rest timers and a contribution-style activity heatmap help you track your focus, with more tools to come.
 
 **Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文**
 
@@ -23,14 +27,13 @@ The menu reads Codex's appearance configuration and follows its light/dark theme
 <tr><td><img src="docs/images/timer-en.png" width="280" alt="Dark theme"></td><td><img src="docs/images/light-en.png" width="280" alt="Light theme"></td></tr>
 </table>
 
-## Pointer tracking and tactile interactions
+## Silver reflections and tactile interactions
 
-A subtle surface highlight follows your pointer. Drag the statistics selector with gentle damping; text changes color exactly where the thumb passes. Buttons compress with an inset shadow, then gently rebound on release.
+Hold the right mouse button and move to tilt the silver glass card; the highlight moves with its angle. Release to return to rest. Drag the statistics selector with gentle damping; text changes color exactly where the thumb passes. Buttons compress with an inset shadow, then gently rebound on release.
 
-<p align="center"><img src="docs/images/pointer-tracking.gif" width="390" alt="Subtle surface highlight following the mouse"></p>
 <p align="center"><img src="docs/images/interactions.gif" width="489" alt="Damped slider, live text contrast and elastic button feedback"></p>
 
-*The pointer recording preserves the actual highlight intensity; a cursor marker indicates the recorded mouse position. When system animations are disabled, controls show their final state immediately.*
+*When system animations are disabled, the card returns to rest immediately on release.*
 
 ## A contribution-style heatmap for your focus
 

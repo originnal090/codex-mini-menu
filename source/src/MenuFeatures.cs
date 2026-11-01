@@ -50,6 +50,10 @@ namespace RingTimer {
     readonly FeatureRegistry registry;readonly Action closed,restore;readonly TextBlock title;readonly Button back;readonly ContentControl body;readonly System.Windows.Controls.Primitives.UniformGrid featureNav;readonly List<Button> featureTabs=new List<Button>();readonly Style navActiveStyle=Theme.RoundedButtonStyle(true,15),navIdleStyle=Theme.RoundedButtonStyle(false,15);
     readonly Dictionary<string,TextBlock> summaries=new Dictionary<string,TextBlock>();StackPanel home;IMenuFeature active;readonly AppearanceSettings appearance;AppearancePanel settingsView;SoundSettingsPanel soundView;LanguageSettingsPanel languageView;SettingsOverview settingsOverview;string settingsPage;
     readonly Border surface,navIsland;readonly TranslateTransform reveal=new TranslateTransform(),pageShift=new TranslateTransform();
+    internal SilverCardPresenter CardPresenter{get;private set;}
+    internal Border CardSurface{get{return surface;}}
+    internal bool CanTiltCard{get{return !IsClosing&&!resizing&&!morphing&&RevealProgress>.99;}}
+    internal void RestoreCardContour(){lastShape=Rect.Empty;UpdateRevealGeometry();}
     internal Func<double> WorkingHeight=null;readonly ScrollViewer pageScroll;
     public bool Disposing;public Action PresentationRequested;bool preparing,resizing;Size presentedSize,presentationSize;int sizeEpoch,visibilityEpoch;double navigationHeight=Double.NaN;
     public bool IsClosing{get;private set;}public bool Above{get;set;}public bool AnimationsEnabled{get;set;}
@@ -57,7 +61,7 @@ namespace RingTimer {
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition):this(features,onClose,restorePosition,new AppearanceSettings(null)){}
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition,AppearanceSettings preferences){
       appearance=preferences;registry=features;closed=onClose;restore=restorePosition;Title="小菜单";Width=Theme.MenuWidth;SizeToContent=SizeToContent.Manual;Above=true;AnimationsEnabled=true;
-      surface=new Border{Background=Theme.GlassFill,BorderBrush=Theme.GlassRim(),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(Theme.MenuRadius),Padding=new Thickness(Theme.MenuInset),Margin=new Thickness(8),VerticalAlignment=VerticalAlignment.Bottom,RenderTransform=reveal};Content=surface;
+      surface=new Border{Background=Theme.GlassFill,BorderBrush=Theme.GlassRim(),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(Theme.MenuRadius),Padding=new Thickness(Theme.MenuInset),Margin=new Thickness(8),VerticalAlignment=VerticalAlignment.Bottom,RenderTransform=reveal};CardPresenter=new SilverCardPresenter(this,surface);Content=CardPresenter;
       // The header hit targets extend 8 DIP into the card padding. Give their
       // parent that actual width so clipping keeps the entire 40 DIP buttons.
       // Body margins restore its original content width; vertical clipping still
@@ -72,10 +76,9 @@ namespace RingTimer {
       featureNav=new System.Windows.Controls.Primitives.UniformGrid{Columns=2,Width=164,Height=32,HorizontalAlignment=HorizontalAlignment.Center,Visibility=Visibility.Collapsed};navIsland=Theme.Island(featureNav,new Thickness(3),20);navIsland.HorizontalAlignment=HorizontalAlignment.Center;Grid.SetColumn(navIsland,1);header.Children.Add(navIsland);
       foreach(string id in new[]{"timer","stats"}){string destination=id;var tab=Theme.Button(id=="timer"?"计时":"统计",false);tab.Style=Theme.RoundedButtonStyle(false,15);tab.Effect=null;tab.BorderBrush=Brushes.Transparent;tab.Height=32;tab.FontSize=12;tab.Margin=new Thickness(2,0,2,0);tab.Tag=id;L.Bind(tab,AutomationProperties.NameProperty,id=="timer"?"打开计时器":"打开统计");tab.Click+=(s,e)=>OpenFeature(destination);featureTabs.Add(tab);featureNav.Children.Add(tab);}
       body=new ContentControl{Width=Theme.MenuContentWidth,Margin=new Thickness(0,16,0,0),HorizontalContentAlignment=HorizontalAlignment.Stretch,RenderTransform=pageShift};pageScroll=new ScrollViewer{Content=body,HorizontalContentAlignment=HorizontalAlignment.Center,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,PanningMode=PanningMode.VerticalOnly};Theme.StyleScroll(pageScroll);stack.Children.Add(pageScroll);
-      MicroMotion.AddSpecular(layers);
       surface.SizeChanged+=(s,e)=>UpdateRevealGeometry();
       foreach(var feature in registry.Features){var f=feature;f.ContentChanged+=()=>{if(active==f)RequestPresentation();};}
-      PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape){var timer=active as TimerFeature;if(timer!=null&&timer.Panel.IsEditing)timer.Panel.CancelEditor();else ClosePanel();e.Handled=true;}};
+      PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape){if(CardPresenter.IsPresenting){CardPresenter.Release();e.Handled=true;return;}var timer=active as TimerFeature;if(timer!=null&&timer.Panel.IsEditing)timer.Panel.CancelEditor();else ClosePanel();e.Handled=true;}};
       Closing+=(s,e)=>{if(!Disposing){e.Cancel=true;ClosePanel();}else CancelMotion();};L.Changed+=LanguageChanged;Closed+=(s,e)=>L.Changed-=LanguageChanged;ShowHome();
     }
     void LanguageChanged(){title.Text=settingsPage!=null?L.T(SettingsTitle(settingsPage)):active==null?L.T("小菜单"):active.Title;Refresh();Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,new Action(()=>{if(!Disposing)Refresh();}));}
@@ -83,7 +86,7 @@ namespace RingTimer {
     static Button IconButton(string geometry,string name){var b=Theme.Button("",false);b.Content=Glyph(geometry);b.Width=40;b.Height=40;b.Background=Theme.IslandFill;L.Bind(b,FrameworkElement.ToolTipProperty,name);L.Bind(b,AutomationProperties.NameProperty,name);return b;}
     // The header retains its 40 DIP spacer. Return occupies the existing launcher
     // gutter independently of content measurement and page transition transforms.
-    public void ShowHome(){if(active==null&&home!=null&&settingsPage==null)return;navigationHeight=surface.ActualHeight;active=null;settingsPage=null;back.Visibility=Visibility.Hidden;title.Text=L.T("小菜单");summaries.Clear();home=new StackPanel();
+    public void ShowHome(){if(active==null&&home!=null&&settingsPage==null)return;CardPresenter.Reset();navigationHeight=surface.ActualHeight;active=null;settingsPage=null;back.Visibility=Visibility.Hidden;title.Text=L.T("小菜单");summaries.Clear();home=new StackPanel();
       var label=Theme.Text("已安装",12,Theme.Muted);label.Margin=new Thickness(0,0,0,8);home.Children.Add(label);
       foreach(var feature in registry.Features){var f=feature;var button=Theme.Button("",false);button.Height=76;button.Margin=new Thickness(0,0,0,14);button.Padding=new Thickness(16,12,16,12);button.HorizontalContentAlignment=HorizontalAlignment.Stretch;L.Bind(button,AutomationProperties.NameProperty,f.Id=="timer"?"打开计时器":"打开"+f.Title);
         var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});row.ColumnDefinitions.Add(new ColumnDefinition());row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});
@@ -96,16 +99,16 @@ namespace RingTimer {
       var tools=new Grid();tools.ColumnDefinitions.Add(new ColumnDefinition());tools.ColumnDefinitions.Add(new ColumnDefinition());home.Children.Add(tools);
       var settings=Theme.Button("设置",false);settings.Margin=new Thickness(0,0,7,0);settings.Click+=(s,e)=>OpenSettings();tools.Children.Add(settings);
       var reset=Theme.Button("恢复位置",false);reset.Margin=new Thickness(7,0,0,0);reset.Click+=(s,e)=>restore();Grid.SetColumn(reset,1);tools.Children.Add(reset);
-      var hint=Theme.Text(registry.Issues.Count>0?registry.Issues[0]:"拖动圆环调整位置",12,Theme.Muted);hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(0,16,0,0);home.Children.Add(hint);body.Content=home;pageScroll.ScrollToTop();RequestPresentation(true);AnimatePage(-8);
+      var hint=Theme.Text(registry.Issues.Count>0?registry.Issues[0]:"拖动圆环调整位置 · 按住右键摆动卡片",12,Theme.Muted);hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(0,16,0,0);home.Children.Add(hint);body.Content=home;pageScroll.ScrollToTop();RequestPresentation(true);AnimatePage(-8);
     }
     static string SettingsTitle(string page){return page=="language"?"语言":page=="appearance"?"外观":page=="sound"?"提示音":"设置";}
     void SetBack(bool toSettings){back.Visibility=Visibility.Visible;string name=toSettings?"返回设置":"返回小菜单";L.Bind(back,FrameworkElement.ToolTipProperty,name);L.Bind(back,AutomationProperties.NameProperty,name);}
-    void ShowSettingsPage(string page,FrameworkElement view,double direction){if(settingsPage==page)return;navigationHeight=surface.ActualHeight;active=null;settingsPage=page;title.Text=L.T(SettingsTitle(page));SetBack(page!="settings");body.Content=view;pageScroll.ScrollToTop();body.UpdateLayout();RequestPresentation(true);AnimatePage(direction);}
+    void ShowSettingsPage(string page,FrameworkElement view,double direction){if(settingsPage==page)return;CardPresenter.Reset();navigationHeight=surface.ActualHeight;active=null;settingsPage=page;title.Text=L.T(SettingsTitle(page));SetBack(page!="settings");body.Content=view;pageScroll.ScrollToTop();body.UpdateLayout();RequestPresentation(true);AnimatePage(direction);}
     public void OpenSettings(){if(settingsOverview==null)settingsOverview=new SettingsOverview(appearance,OpenLanguageSettings,OpenAppearanceSettings,OpenSoundSettings);ShowSettingsPage("settings",settingsOverview,settingsPage==null?8:-8);}
     public void OpenLanguageSettings(){if(languageView==null)languageView=new LanguageSettingsPanel(appearance);ShowSettingsPage("language",languageView,8);}
     public void OpenAppearanceSettings(){if(settingsView==null)settingsView=new AppearancePanel(appearance);ShowSettingsPage("appearance",settingsView,8);}
     public void OpenSoundSettings(){if(soundView==null){var timer=registry.Find("timer") as TimerFeature;soundView=new SoundSettingsPanel(appearance,timer==null?null:timer.Engine,timer==null?(Action)null:timer.SaveAction);}ShowSettingsPage("sound",soundView,8);}
-    public bool OpenFeature(string id){var feature=registry.Find(id);if(feature==null)return false;if(active==feature){feature.Refresh();return true;}navigationHeight=surface.ActualHeight;preparing=true;try{settingsPage=null;active=feature;title.Text=feature.Title;SetBack(false);body.Content=feature.View;pageScroll.ScrollToTop();feature.Refresh();}finally{preparing=false;}RequestPresentation(true);AnimatePage(8);return true;}
+    public bool OpenFeature(string id){var feature=registry.Find(id);if(feature==null)return false;if(active==feature){feature.Refresh();return true;}CardPresenter.Reset();navigationHeight=surface.ActualHeight;preparing=true;try{settingsPage=null;active=feature;title.Text=feature.Title;SetBack(false);body.Content=feature.View;pageScroll.ScrollToTop();feature.Refresh();}finally{preparing=false;}RequestPresentation(true);AnimatePage(8);return true;}
     public void Refresh(){if(active!=null)active.Refresh();else foreach(var f in registry.Features){TextBlock label;if(summaries.TryGetValue(f.Id,out label)&&label.Text!=f.Summary)label.Text=f.Summary;}RequestPresentation();}
     double PageCapacity(){if(WorkingHeight!=null)return Math.Max(80,WorkingHeight()-162);var anchor=AnchorBounds==null?null:AnchorBounds();var screen=anchor.HasValue?System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(anchor.Value.Left,anchor.Value.Top)):System.Windows.Forms.Screen.FromHandle(Handle);return Math.Max(80,screen.WorkingArea.Height/Native.ScaleFor(Handle)-162);}
     Size NaturalSize(){var handle=Handle;surface.Padding=Above?new Thickness(24,24,24,64):new Thickness(24,64,24,24);back.VerticalAlignment=Above?VerticalAlignment.Bottom:VerticalAlignment.Top;back.Margin=Above?new Thickness(0,0,0,-58):new Thickness(0,-58,0,0);var view=(FrameworkElement)body.Content;view.Measure(new Size(Theme.MenuContentWidth,Double.PositiveInfinity));body.Height=view.DesiredSize.Height;double visible=System.Math.Min(view.DesiredSize.Height,System.Math.Floor(PageCapacity()));pageScroll.Height=visible+16;return new Size(Theme.MenuWidth,Math.Ceiling(visible+162));}
