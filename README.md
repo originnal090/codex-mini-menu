@@ -1,5 +1,7 @@
 # Codex Mini Menu
 
+Version 2.11.0 adds **Context**: the launcher center follows the current chat's context usage, turns orange at 80% and red at 90%, and shows one reminder per chat. See [module details and compatibility](CONTEXT.md).
+
 **A floating Windows utility menu that follows Codex.** Expand from a circular launcher, match the Codex theme, and enjoy pointer-following highlights, adjustable transparency and a frosted-glass finish. Built-in work/rest timers and a contribution-style activity heatmap help you track your focus, with more tools to come.
 
 **Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文**

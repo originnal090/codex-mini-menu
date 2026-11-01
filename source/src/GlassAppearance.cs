@@ -43,7 +43,7 @@ namespace RingTimer {
       tokens["GlassEdge"].Set(Alpha(Colors.White,(byte)(IsDark?58:210)));
       tokens["GlassBottom"].Set(Alpha(IsDark?Colors.White:Colors.Black,(byte)(IsDark?15:25)));
       tokens["GlassControl"].Set(Alpha(IsDark?Colors.White:Colors.Black,(byte)(IsDark?16:10)));
-      tokens["GlassSelected"].Set(Alpha(IsDark?Colors.White:Colors.White,(byte)(IsDark?38:195)));
+      tokens["GlassSelected"].Set(Alpha(IsDark?Colors.White:Colors.White,(byte)(IsDark?38:195)));RefreshIslands();
     }
     public static Brush GlassRim(){var b=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(.7,1)};
       var top=new GradientStop{Offset=0};var bottom=new GradientStop{Offset=1};
@@ -59,7 +59,7 @@ namespace RingTimer {
     public AppearancePanel(AppearanceSettings preferences){settings=preferences;
       Loaded+=(s,e)=>{settings.Changed+=UpdateValue;UpdateValue();};Unloaded+=(s,e)=>settings.Changed-=UpdateValue;
       var intro=Theme.Text("让背景透过玻璃",18,Theme.Foreground);intro.TextWrapping=TextWrapping.Wrap;intro.FontWeight=FontWeights.SemiBold;intro.Margin=new Thickness(0,8,0,8);Children.Add(intro);
-      var description=Theme.Text("小菜单、计时器与悬浮按钮共用此设置。",12,Theme.Muted);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,24);Children.Add(description);
+      var description=Theme.Text("小菜单、计时器与悬浮按钮共用此设置。",12,Theme.Muted);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,0);Children.Add(description);
       var row=new Grid();row.Children.Add(Theme.Text("玻璃透明度",14,Theme.Foreground));value=Theme.Text("",14,Theme.Foreground);value.HorizontalAlignment=HorizontalAlignment.Right;row.Children.Add(value);Children.Add(row);
       Transparency=new Slider{Minimum=0,Maximum=90,Value=settings.Transparency,TickFrequency=1,IsSnapToTickEnabled=true,SmallChange=1,LargeChange=10,Height=44,Margin=new Thickness(0,10,0,0),Foreground=Theme.Foreground,FocusVisualStyle=Theme.FocusRing,IsMoveToPointEnabled=true};L.Bind(Transparency,AutomationProperties.NameProperty,"玻璃透明度，百分比");
       Transparency.Template=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type Slider}'>
@@ -71,8 +71,9 @@ namespace RingTimer {
           </Track></Grid></ControlTemplate>");
       Transparency.Resources["GlassControl"]=Theme.GlassControl;Transparency.Resources["Ink"]=Theme.Foreground;Transparency.Resources["Thumb"]=Theme.SwitchThumb;Children.Add(Transparency);
       var ends=new Grid();ends.Children.Add(Theme.Text("厚实",11,Theme.Muted));var clear=Theme.Text("通透",11,Theme.Muted);clear.HorizontalAlignment=HorizontalAlignment.Right;ends.Children.Add(clear);Children.Add(ends);
-      var reset=Theme.Button("恢复默认透明度",false);reset.Background=Theme.GlassControl;reset.Height=44;reset.Margin=new Thickness(0,24,0,0);reset.Click+=(s,e)=>Transparency.Value=42;Children.Add(reset);
-      hint=Theme.Text("",12,Theme.Muted);hint.MinHeight=40;hint.Margin=new Thickness(0,24,0,0);hint.TextWrapping=TextWrapping.Wrap;Children.Add(hint);
+      var reset=Theme.Button("恢复默认透明度",false);reset.Height=44;reset.Margin=new Thickness(0,14,0,0);reset.Click+=(s,e)=>Transparency.Value=42;Children.Add(reset);
+      hint=Theme.Text("",12,Theme.Muted);hint.MinHeight=40;hint.Margin=new Thickness(0,14,0,0);hint.TextWrapping=TextWrapping.Wrap;Children.Add(hint);
+      Theme.GroupIsland(this,0,2,new Thickness(16)).Margin=new Thickness(0,0,0,14);Theme.GroupIsland(this,1,3,new Thickness(16));
       Transparency.ValueChanged+=(s,e)=>{settings.Transparency=(int)Math.Round(Transparency.Value);UpdateValue();};UpdateValue();
     }
     void UpdateValue(){value.Text=settings.Transparency+"%";L.Bind(hint,TextBlock.TextProperty,settings.SaveFailed?"当前设置已生效，暂时无法保存。":GlassBackdrop.SystemTransparencyEnabled()?"外观自动跟随 Codex，调整即时生效。":"外观跟随 Codex。系统毛玻璃已关闭，当前使用透明材质。");}

@@ -90,12 +90,15 @@ namespace RingTimer {
     readonly TimerEngine engine;readonly TimerFeature timerFeature;readonly StatsStore stats;DateTime statsRetry;readonly FeatureRegistry registry;readonly Bubble bubble;readonly MenuWindow panel;readonly Forms.NotifyIcon tray;readonly Icon icon;
     readonly DispatcherTimer tick;readonly EventWaitHandle showEvent,exitEvent;readonly string stateFile,testDirectory;readonly bool smokeRun;readonly AppearanceSettings appearance;
     readonly NativeFollower follower;readonly HostTracker tracker;IntPtr target,observed,owner;bool alert,manual,pinned,disposed,smokeExpired;int smokeTicks;string paintKey,trayText;
+    readonly ContextFeature contextFeature;readonly ContextTracker contextTracker;readonly ContextAlerts contextAlerts;ContextReminder contextReminder;
     public MenuApplication(EventWaitHandle show,EventWaitHandle exit,string testRoot,bool runSmoke,bool openInitially){
       showEvent=show;exitEvent=exit;testDirectory=testRoot;smokeRun=runSmoke;
       string data=testRoot??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex","timer-data");
       stateFile=Path.Combine(data,"state.json");engine=new TimerEngine(TimerEngine.Load(stateFile),()=>DateTime.UtcNow);timerFeature=new TimerFeature(engine,Save);stats=new StatsStore(Path.Combine(data,"stats.json"));
       string moduleRoot=Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"..","modules"));if(!Directory.Exists(moduleRoot))moduleRoot=Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"..","plugin","modules"));
-      appearance=new AppearanceSettings(Path.Combine(data,"appearance.json"));registry=FeatureRegistry.Load(moduleRoot,timerFeature,new StatsFeature(stats));bubble=new Bubble();panel=new MenuWindow(registry,()=>{alert=false;manual=false;pinned=false;panel.Topmost=false;Track();},ResetPosition,appearance);
+      contextFeature=new ContextFeature();contextAlerts=new ContextAlerts(Path.Combine(data,"context-alerts.json"));
+      appearance=new AppearanceSettings(Path.Combine(data,"appearance.json"));registry=FeatureRegistry.Load(moduleRoot,timerFeature,new StatsFeature(stats),contextFeature);bubble=new Bubble();panel=new MenuWindow(registry,()=>{alert=false;manual=false;pinned=false;panel.Topmost=false;Track();},ResetPosition,appearance);
+      if(testRoot==null&&registry.Find("context")!=null)contextTracker=new ContextTracker(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex"));
       follower=new NativeFollower();tracker=new HostTracker(Track);
       panel.AnchorBounds=()=>bubble.IsVisible?(Native.RECT?)bubble.PixelBounds:null;
       bubble.Clicked=()=>{if(panel.IsVisible&&!panel.IsClosing)panel.ClosePanel();else OpenPanel(false,null);};
@@ -122,18 +125,23 @@ namespace RingTimer {
       foreach(var feature in registry.Features)if(feature.Tick()){Save();smokeExpired=true;if(engine.State.Status=="finished"){alert=true;OpenPanel(true,feature.Id);tray.ShowBalloonTip(8000,L.Language=="en"?feature.Title+" reminder":feature.Title+"提醒",feature.Summary,Forms.ToolTipIcon.Info);}if(feature.PlaySound)appearance.Audio.Play(appearance.SoundFile,true);}
       if(engine.State.PendingStats.Count>0&&DateTime.UtcNow>=statsRetry){if(TrySave()&&stats.Collect(engine.State)){Save();statsRetry=DateTime.MinValue;}else statsRetry=DateTime.UtcNow.AddSeconds(10);}
       stats.UpdateLive(engine.CurrentSession());
-      string summary=timerFeature.Summary,status=engine.State.Status;
+      Track();string summary=timerFeature.Summary,status=engine.State.Status;
+      if(contextTracker!=null){contextTracker.Follow(target);var usage=contextTracker.Current;contextFeature.Update(usage);
+        if(contextReminder!=null&&contextReminder.ThreadId!=usage.ThreadId){contextReminder.Close();contextReminder=null;}
+        if(bubble.IsVisible&&contextAlerts.Take(usage)){if(contextReminder!=null)contextReminder.Close();var reminder=new ContextReminder(usage,()=>OpenPanel(true,"context"));contextReminder=reminder;reminder.Closed+=(s,e)=>{if(contextReminder==reminder)contextReminder=null;};reminder.Place(bubble.PixelBounds,target);reminder.Show();}
+        if(!bubble.IsVisible&&contextReminder!=null){contextReminder.Close();contextReminder=null;}
+      }
       if(!bubble.Dragging){
         // Repaint only when a displayed value actually changed: the panel is measured
         // for every refresh, so an unchanged 200ms tick must not trigger layout.
-        string key=status+"|"+(int)Math.Ceiling(engine.Remaining)+"|"+engine.State.Total+"|"+summary+"|"+panel.ActiveId+"|"+stats.Revision+"|"+DateTime.Today.Ticks;
+        string key=status+"|"+(int)Math.Ceiling(engine.Remaining)+"|"+engine.State.Total+"|"+summary+"|"+panel.ActiveId+"|"+stats.Revision+"|"+DateTime.Today.Ticks+"|"+contextFeature.Summary+"|"+contextFeature.Usage.ThreadId;
         if(panel.IsVisible&&key!=paintKey){paintKey=key;panel.Refresh();}
         double progress=status=="running"||status=="paused"?(engine.State.Total>0?Math.Max(0,Math.Min(1,engine.Remaining/engine.State.Total)):0):1;
         bubble.SetStatus(summary,status,progress);
+        bubble.SetContext(contextFeature.Usage);
       }
       // Writing NotifyIcon.Text posts a shell message; only write on change.
       string next=L.T("小菜单")+" · "+summary;if(next.Length>63)next=next.Substring(0,63);if(tray!=null&&trayText!=next){trayText=next;tray.Text=next;}
-      Track();
       if(smokeRun&&++smokeTicks==18){Theme.Snapshot(panel,Path.Combine(testDirectory,"panel.png"),1.5);File.WriteAllText(Path.Combine(testDirectory,"smoke.json"),"{\"expired\":"+smokeExpired.ToString().ToLowerInvariant()+",\"panelVisible\":"+panel.IsVisible.ToString().ToLowerInvariant()+",\"status\":\""+engine.State.Status+"\"}");Application.Current.Shutdown();}
     }
     void Track(){
@@ -187,7 +195,7 @@ namespace RingTimer {
     }
     static string StartupPath(){return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup),"CodexRingTimerLite.lnk");}
     void SetStartup(bool enabled){try{if(enabled){object shell=Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")),link=null;try{link=shell.GetType().InvokeMember("CreateShortcut",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[]{StartupPath()});string canonical=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex","tools","codex-ring-timer","plugin","bin","CodexRingTimer.exe");string exe=File.Exists(canonical)?canonical:Forms.Application.ExecutablePath;link.GetType().InvokeMember("TargetPath",System.Reflection.BindingFlags.SetProperty,null,link,new object[]{exe});link.GetType().InvokeMember("Save",System.Reflection.BindingFlags.InvokeMethod,null,link,null);}finally{if(link!=null)Marshal.FinalReleaseComObject(link);Marshal.FinalReleaseComObject(shell);}}else if(File.Exists(StartupPath()))File.Delete(StartupPath());}catch{tray.ShowBalloonTip(4000,L.T("小菜单"),L.T("无法更改登录启动设置"),Forms.ToolTipIcon.Warning);}}
-    public void Dispose(){if(disposed)return;disposed=true;L.Changed-=UpdateTrayLanguage;Theme.Changed-=UpdateTrayTheme;tick.Stop();tracker.Dispose();follower.Dispose();appearance.Dispose();Save();tray.Visible=false;tray.Dispose();icon.Dispose();panel.Disposing=true;panel.Close();bubble.Close();}
+    public void Dispose(){if(disposed)return;disposed=true;L.Changed-=UpdateTrayLanguage;Theme.Changed-=UpdateTrayTheme;tick.Stop();if(contextTracker!=null)contextTracker.Dispose();if(contextReminder!=null)contextReminder.Close();tracker.Dispose();follower.Dispose();appearance.Dispose();Save();tray.Visible=false;tray.Dispose();icon.Dispose();panel.Disposing=true;panel.Close();bubble.Close();}
   }
   static class Program {
     [STAThread]static void Main(string[] args){

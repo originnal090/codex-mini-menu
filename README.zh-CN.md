@@ -1,5 +1,11 @@
 # Codex 小菜单
 
+**2.12.0：悬浮岛界面。** 完整玻璃卡片内的导航、计时、统计、上下文与设置采用统一的圆润功能岛，支持小屏幕内容滚动。[改版说明](docs/menu-islands-2.12.0.md)
+
+<p align="center"><img src="docs/images/islands-home.png" width="280" alt="悬浮岛小菜单"><img src="docs/images/islands-timer.png" width="280" alt="悬浮岛计时页面"></p>
+
+2.11.0 新增「上下文」模块：圆环中心显示当前聊天的已用百分比，80% 变橙，90% 变红并提醒一次；切换聊天后自动更新。[功能与兼容性说明](CONTEXT.md)。
+
 **跟随 Codex 的 Windows 悬浮工具菜单。** 从圆环扩散展开，跟随主题切换配色，以鼠标追踪高光、可调透明度和磨砂玻璃质感融入桌面。内置工作／休息计时与打卡式活动热力图，更多实用工具持续扩展中。
 
 **Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English**

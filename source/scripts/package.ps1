@@ -37,7 +37,7 @@ Copy-Item -LiteralPath (Join-Path $root 'bin\CodexRingTimer.exe') -Destination (
 $stage=Join-Path $base 'dist\CodexMiniMenu'
 if(Test-Path -LiteralPath $stage){if([IO.Path]::GetFullPath($stage) -ne (Join-Path ([IO.Path]::GetFullPath($base)) 'dist\CodexMiniMenu')){throw 'Unexpected staging path'};Remove-Item -LiteralPath $stage -Recurse -Force}
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
-foreach($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md')){Copy-Item -LiteralPath (Join-Path $base $name) -Destination $stage -Recurse -Force}
+foreach($name in @('plugin','.agents','install.ps1','uninstall.ps1','install.cmd','uninstall.cmd','start.cmd','README.md','README.zh-CN.md','CONTEXT.md','docs')){Copy-Item -LiteralPath (Join-Path $base $name) -Destination $stage -Recurse -Force}
 New-Item -ItemType Directory -Path (Join-Path $stage 'source') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'src') -Destination (Join-Path $stage 'source') -Recurse
 Copy-Item -LiteralPath (Join-Path $root 'tests') -Destination (Join-Path $stage 'source') -Recurse

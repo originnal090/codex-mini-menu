@@ -1,0 +1,10 @@
+﻿$ErrorActionPreference='Stop'
+$root=Split-Path -Parent $PSScriptRoot
+$framework=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319'
+New-Item -ItemType Directory -Path "$root/artifacts" -Force | Out-Null
+$refs=@('/r:System.Windows.Forms.dll','/r:System.Drawing.dll','/r:System.Web.Extensions.dll','/r:System.Xaml.dll',"/r:$framework/WPF/WindowsBase.dll","/r:$framework/WPF/PresentationCore.dll","/r:$framework/WPF/PresentationFramework.dll","/r:$framework/WPF/UIAutomationClient.dll","/r:$framework/WPF/UIAutomationProvider.dll","/r:$framework/WPF/UIAutomationTypes.dll")
+$sources=(Get-ChildItem -LiteralPath "$root/src" -Filter '*.cs').FullName
+& "$framework/csc.exe" /nologo /target:exe /main:IslandLayoutTests @refs "/out:$root\artifacts\IslandLayoutTests.exe" @sources "$root\tests\IslandLayoutTests.cs"
+if($LASTEXITCODE){throw 'Island layout test compilation failed'}
+& "$root\artifacts\IslandLayoutTests.exe" "$root\artifacts\islands"
+if($LASTEXITCODE){throw 'Island layout tests failed'}

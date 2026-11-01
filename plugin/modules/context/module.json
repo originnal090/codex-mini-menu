@@ -1,0 +1,8 @@
+{
+  "id": "context",
+  "name": "上下文",
+  "version": "1.0.0",
+  "enabled": true,
+  "provider": "builtin",
+  "description": "跟随当前对话显示上下文占比，80% 变橙，90% 变红并提醒一次"
+}

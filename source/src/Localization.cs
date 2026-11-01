@@ -9,6 +9,11 @@ namespace RingTimer {
   // pages are not retained by the language service.
   static class L {
     static readonly Dictionary<string,string> english=new Dictionary<string,string>{
+      {"上下文","Context"},{"已用上下文","Context used"},{"等待当前对话数据","Waiting for current chat"},{"暂时无法确认用量","Usage unavailable"},
+      {"80% 变橙 · 90% 变红","Orange at 80% · Red at 90%"},{"每个对话达到 90% 时提醒一次","One reminder per chat at 90%"},
+      {"上下文即将用满，建议开启新对话。","Context is nearly full. Consider starting a new chat."},{"上下文已超过 80%，可以准备切换对话。","Context has reached 80%. Prepare to start a new chat."},
+      {"跟随当前对话，按最近一次用量更新。","Follows the current chat using the latest usage sample."},{"正在识别当前对话；数据不明确时显示 —。","Identifying the current chat. Unavailable usage is shown as —."},
+      {"上下文提醒","Context reminder"},{"查看上下文","View context"},{"知道了","Dismiss"},{"打开上下文","Open context"},
 {"暂无完成记录","No completed rounds"},{"执行完成","Completed"},{"再次开始","Start again"},{"3 分钟","3 min"},{"10 分钟","10 min"},{"15 分钟","15 min"},
       {"● 工作","● Work"},{"● 休息","● Rest"},{"工作","Work"},{"休息","Rest"},{"未分类","Unclassified"},{"连续执行","Run"},{"组后等待","sets, then wait"},{"开始工作","Start work"},{"继续","Resume"},{"再来一组","Start again"},{"本组已完成","Cycle complete"},{"单次计时","Single timer"},{"工作时长","Work duration"},{"休息时长","Rest duration"},{"工作与休息循环","Work and rest cycle"},{"确定","Apply"},{"● 今日工作","● Work today"},{"● 今日休息","● Rest today"},{"工作 → 休息 → 等待","Work → Rest → Wait"},{"声音","Tone"},{"音量","Volume"},{"柔和钟声","Soft bell"},{"清脆双音","Double tone"},{"自定义音频","Custom audio"},{"工作或休息结束时播放","Plays after work or rest"},{"更多设置","More settings"},{"结束本次循环","End this cycle"},
       {"小菜单","Mini Menu"},{"计时器","Timer"},{"设置","Settings"},

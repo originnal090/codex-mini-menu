@@ -41,10 +41,10 @@ namespace RingTimer {
   public int Selected{get{return selected;}}public bool IsInteracting{get{return dragging;}}
   internal double ThumbPosition{get{return move.X;}}
   public SlidingRail(params string[] labels){Height=34;Background=Brushes.Transparent;Focusable=true;FocusVisualStyle=Theme.FocusRing;
-   Children.Add(new Border{Background=Theme.GlassControl,CornerRadius=new CornerRadius(10)});
-   thumb=new Border{Background=Theme.Primary,CornerRadius=new CornerRadius(8),Height=28,Margin=new Thickness(3,3,0,3),HorizontalAlignment=HorizontalAlignment.Left,RenderTransform=move,IsHitTestVisible=false};Children.Add(thumb);
+   Children.Add(Theme.Island(null,new Thickness(0),17));
+   thumb=new Border{Background=Theme.Primary,CornerRadius=new CornerRadius(14),Height=28,Margin=new Thickness(3,3,0,3),HorizontalAlignment=HorizontalAlignment.Left,RenderTransform=move,IsHitTestVisible=false};Children.Add(thumb);
    var grid=new System.Windows.Controls.Primitives.UniformGrid{Columns=labels.Length,Margin=new Thickness(3)};Children.Add(grid);
-   for(int i=0;i<labels.Length;i++){int n=i;var button=Theme.Button(labels[i],false);button.Style=Theme.BareStyle;button.Background=Brushes.Transparent;button.Height=28;button.FontSize=12;button.Click+=(s,e)=>Select(n,true);buttons.Add(button);grid.Children.Add(button);}
+   for(int i=0;i<labels.Length;i++){int n=i;var button=Theme.Button(labels[i],false);button.Style=Theme.BareStyle;button.Effect=null;button.Background=Brushes.Transparent;button.Height=28;button.FontSize=12;button.Click+=(s,e)=>Select(n,true);buttons.Add(button);grid.Children.Add(button);}
    var contrast=new System.Windows.Controls.Primitives.UniformGrid{Columns=labels.Length,Margin=new Thickness(3),IsHitTestVisible=false,Clip=textClip};
    foreach(string label in labels){var text=new ContrastText{FontFamily=Theme.Font,FontSize=12,Foreground=Theme.PrimaryText,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};L.Bind(text,TextBlock.TextProperty,label);contrast.Children.Add(text);}Children.Add(contrast);
    SizeChanged+=(s,e)=>{if(dragging)EndGesture(false);thumb.Width=Step;move.X=target=selected*Step;settling=false;PaintLabels();};
@@ -73,13 +73,13 @@ namespace RingTimer {
   public void Select(int value,bool notify){int next=Math.Max(0,Math.Min(buttons.Count-1,value));bool changed=next!=selected;selected=next;target=selected*Step;settleFrom=move.X;elapsed=0;PaintLabels();
    if(IsVisible&&SystemParameters.ClientAreaAnimation&&Math.Abs(target-move.X)>.01){settling=true;StartFrames();}else{settling=false;move.X=target;StopFrames();PaintContrast();}if(changed&&notify&&Changed!=null)Changed(selected);
   }
-  void PaintContrast(){textClip.Rect=new Rect(move.X,0,Step,28);textClip.RadiusX=textClip.RadiusY=8;}
+  void PaintContrast(){textClip.Rect=new Rect(move.X,0,Step,28);textClip.RadiusX=textClip.RadiusY=14;}
   void PaintLabels(){PaintContrast();for(int i=0;i<buttons.Count;i++){buttons[i].Foreground=Theme.Muted;AutomationProperties.SetItemStatus(buttons[i],i==selected?L.T("已选择"):"");}}
  }
  sealed class CycleRing:FrameworkElement {
   public static readonly DependencyProperty ProgressProperty=DependencyProperty.Register("Progress",typeof(double),typeof(CycleRing),new FrameworkPropertyMetadata(1.0,FrameworkPropertyMetadataOptions.AffectsRender));
   public double Progress{get{return (double)GetValue(ProgressProperty);}set{SetValue(ProgressProperty,value);}}
   public Brush Ink=Theme.Done;
-  protected override void OnRender(DrawingContext dc){base.OnRender(dc);var center=new Point(100,100);dc.PushOpacity(.04);dc.DrawEllipse(Ink,null,center,81,81);dc.Pop();dc.DrawEllipse(null,new Pen(Theme.Track,8),center,88,88);double p=Math.Max(0,Math.Min(1,Progress));var pen=new Pen(Ink,8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};if(p>=.99999)dc.DrawEllipse(null,pen,center,88,88);else if(p>0){double a=p*2*Math.PI;var end=new Point(100+88*Math.Sin(a),100-88*Math.Cos(a));var geometry=new StreamGeometry();using(var g=geometry.Open()){g.BeginFigure(new Point(100,12),false,false);g.ArcTo(end,new Size(88,88),0,p>.5,SweepDirection.Clockwise,true,false);}dc.DrawGeometry(null,pen,geometry);}if(p>0)dc.DrawEllipse(Theme.Foreground,null,new Point(100+88*Math.Sin(p*2*Math.PI),100-88*Math.Cos(p*2*Math.PI)),4,4);}
+  protected override void OnRender(DrawingContext dc){base.OnRender(dc);double scale=Math.Min(ActualWidth,ActualHeight)/200.0;dc.PushTransform(new TranslateTransform((ActualWidth-200*scale)/2,(ActualHeight-200*scale)/2));dc.PushTransform(new ScaleTransform(scale,scale));var center=new Point(100,100);dc.PushOpacity(.04);dc.DrawEllipse(Ink,null,center,81,81);dc.Pop();dc.DrawEllipse(null,new Pen(Theme.Track,8),center,88,88);double p=Math.Max(0,Math.Min(1,Progress));var pen=new Pen(Ink,8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};if(p>=.99999)dc.DrawEllipse(null,pen,center,88,88);else if(p>0){double a=p*2*Math.PI;var end=new Point(100+88*Math.Sin(a),100-88*Math.Cos(a));var geometry=new StreamGeometry();using(var g=geometry.Open()){g.BeginFigure(new Point(100,12),false,false);g.ArcTo(end,new Size(88,88),0,p>.5,SweepDirection.Clockwise,true,false);}dc.DrawGeometry(null,pen,geometry);}if(p>0)dc.DrawEllipse(Theme.Foreground,null,new Point(100+88*Math.Sin(p*2*Math.PI),100-88*Math.Cos(p*2*Math.PI)),4,4);dc.Pop();dc.Pop();}
  }
 }

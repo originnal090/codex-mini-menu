@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Automation;
@@ -16,7 +16,7 @@ namespace RingTimer {
       Loaded+=(s,e)=>{settings.Changed+=Update;L.Changed+=Update;Update();};Unloaded+=(s,e)=>{settings.Changed-=Update;L.Changed-=Update;};Update();
     }
     TextBlock AddRow(string title,string geometry,Action action){
-      var button=Theme.Button("",false);button.Height=76;button.Padding=new Thickness(Theme.RowInset,12,Theme.RowInset,12);button.Margin=new Thickness(0,0,0,12);button.HorizontalContentAlignment=HorizontalAlignment.Stretch;L.Bind(button,AutomationProperties.NameProperty,title);
+      var button=Theme.Button("",false);button.Height=76;button.Padding=new Thickness(Theme.RowInset,12,Theme.RowInset,12);button.Margin=new Thickness(0,0,0,14);button.HorizontalContentAlignment=HorizontalAlignment.Stretch;L.Bind(button,AutomationProperties.NameProperty,title);
       var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(Theme.RowIconColumn)});row.ColumnDefinitions.Add(new ColumnDefinition());row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(20)});
       row.Children.Add(Icon(geometry));var text=new StackPanel{VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,12,0)};Grid.SetColumn(text,1);row.Children.Add(text);
       text.Children.Add(Theme.Text(title,14,Theme.Foreground));var summary=Theme.Text("",12,Theme.Muted);summary.Margin=new Thickness(0,6,0,0);summary.TextTrimming=TextTrimming.CharacterEllipsis;text.Children.Add(summary);
@@ -29,12 +29,13 @@ namespace RingTimer {
     public readonly Button Chinese,English;readonly AppearanceSettings settings;
     public LanguageSettingsPanel(AppearanceSettings preferences){settings=preferences;
       var intro=Theme.Text("界面语言",18,Theme.Foreground);intro.FontWeight=FontWeights.SemiBold;intro.Margin=new Thickness(0,8,0,8);Children.Add(intro);
-      var hint=Theme.Text("切换后立即生效",12,Theme.Muted);hint.Margin=new Thickness(0,0,0,24);Children.Add(hint);
+      var hint=Theme.Text("切换后立即生效",12,Theme.Muted);hint.Margin=new Thickness(0,0,0,0);Children.Add(hint);
+      Theme.GroupIsland(this,0,2,new Thickness(16)).Margin=new Thickness(0,0,0,14);
       Chinese=Theme.Button("简体中文",false);English=Theme.Button("English",false);
-      foreach(var button in new[]{Chinese,English}){button.Height=52;button.Margin=new Thickness(0,0,0,12);Children.Add(button);}
+      foreach(var button in new[]{Chinese,English}){button.Height=52;button.Margin=new Thickness(0,0,0,14);Children.Add(button);}
       Chinese.Click+=(s,e)=>settings.Language="zh-CN";English.Click+=(s,e)=>settings.Language="en";
       Loaded+=(s,e)=>{settings.Changed+=Update;Update();};Unloaded+=(s,e)=>settings.Changed-=Update;Update();
     }
-    void Update(){Chinese.Background=settings.Language=="zh-CN"?Theme.GlassSelected:Theme.GlassControl;English.Background=settings.Language=="en"?Theme.GlassSelected:Theme.GlassControl;Chinese.BorderBrush=settings.Language=="zh-CN"?Theme.RimHover:Brushes.Transparent;English.BorderBrush=settings.Language=="en"?Theme.RimHover:Brushes.Transparent;}
+    void Update(){Chinese.Background=settings.Language=="zh-CN"?Theme.Selected:Theme.IslandFill;English.Background=settings.Language=="en"?Theme.Selected:Theme.IslandFill;Chinese.BorderBrush=settings.Language=="zh-CN"?Theme.RimHover:Theme.IslandEdge;English.BorderBrush=settings.Language=="en"?Theme.RimHover:Theme.IslandEdge;}
   }
 }

@@ -19,7 +19,7 @@ using ShapePath=System.Windows.Shapes.Path;
 
 namespace RingTimer {
   static partial class Theme {
-    public const int ControlRadius=22,MenuInset=24,MenuRadius=24,MenuWidth=344,MenuContentWidth=278;
+    public const int ControlRadius=22,MenuInset=24,MenuRadius=34,MenuWidth=368,MenuContentWidth=302;
     public const int RowInset=16,RowIconColumn=28;
     static readonly Dictionary<string,SolidColorBrush> brushes=new Dictionary<string,SolidColorBrush>();
     public static SolidColorBrush Brush(string hex){SolidColorBrush b;if(brushes.TryGetValue(hex,out b))return b;b=(SolidColorBrush)new BrushConverter().ConvertFromInvariantString(hex);b.Freeze();brushes.Add(hex,b);return b;}
@@ -62,9 +62,9 @@ namespace RingTimer {
     </Style>";
     // Hover and press paint a real surface instead of fading the whole button, so a
     // transparent (ghost) button gains a visible hover state instead of dimming.
-    public static Style ButtonStyle{get{if(buttonStyle==null)buttonStyle=MakeStyle(Hover,Pressed);return buttonStyle;}}
+    public static Style ButtonStyle{get{if(buttonStyle==null)buttonStyle=MakeStyle(IslandHover,IslandPressed);return buttonStyle;}}
     public static Style PrimaryStyle{get{if(primaryStyle==null)primaryStyle=MakeStyle(PrimaryHover,PrimaryPressed);return primaryStyle;}}
-    public static Style RoundedButtonStyle(bool primary,int radius){return MakeStyle(primary?PrimaryHover:Hover,primary?PrimaryPressed:Pressed,radius);}
+    public static Style RoundedButtonStyle(bool primary,int radius){return MakeStyle(primary?PrimaryHover:IslandHover,primary?PrimaryPressed:IslandPressed,radius);}
     static Style MakeStyle(Brush hover,Brush press,int radius=ControlRadius){var style=(Style)XamlReader.Parse(ButtonTemplate.Replace("__RADIUS__",radius.ToString(CultureInfo.InvariantCulture)).Replace("__HOVER__","{DynamicResource Hover}").Replace("__PRESS__","{DynamicResource Press}"));style.Resources["Hover"]=hover;style.Resources["Press"]=press;return style;}
     // Keyboard-only focus ring: WPF shows a FocusVisualStyle for keyboard navigation
     // and not for a plain mouse click, unlike an IsKeyboardFocused trigger.
@@ -75,7 +75,7 @@ namespace RingTimer {
     public static Style BareStyle{get{if(bareStyle==null)bareStyle=(Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type Button}'>
       <Setter Property='FocusVisualStyle' Value='{x:Null}'/><Setter Property='Cursor' Value='Hand'/>
       <Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Button}'><ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/></ControlTemplate></Setter.Value></Setter></Style>");return bareStyle;}}
-    public static Button Button(string text,bool primary){var result=new Button{Content=text,Style=primary?PrimaryStyle:ButtonStyle,FocusVisualStyle=FocusRing,HorizontalContentAlignment=HorizontalAlignment.Center,FontFamily=Font,FontSize=14,Foreground=primary?PrimaryText:Foreground,Background=primary?Primary:GlassControl,BorderBrush=Brushes.Transparent,Padding=new Thickness(0),Height=44};L.Bind(result,ContentControl.ContentProperty,text);MicroMotion.Attach(result);return result;}
+    public static Button Button(string text,bool primary){var result=new Button{Content=text,Style=primary?PrimaryStyle:ButtonStyle,FocusVisualStyle=FocusRing,HorizontalContentAlignment=HorizontalAlignment.Center,FontFamily=Font,FontSize=14,Foreground=primary?PrimaryText:Foreground,Background=primary?Primary:IslandFill,BorderBrush=primary?Brushes.Transparent:IslandEdge,Padding=new Thickness(0),Height=44,Effect=IslandElevation()};L.Bind(result,ContentControl.ContentProperty,text);MicroMotion.Attach(result);return result;}
     public static TextBlock Text(string text,double size,Brush color){var result=new TextBlock{FontFamily=Font,FontSize=size,Foreground=color};L.Bind(result,TextBlock.TextProperty,text);return result;}
     // WPF defaults assume a light theme: a dark card would still pop a white tooltip.
     public static void ApplyGlobalResources(Application app){
@@ -108,7 +108,7 @@ namespace RingTimer {
     public void SetBoundsPixels(int x,int y,int width,int height){var current=PixelBounds;if(current.Left==x&&current.Top==y&&current.Width==width&&current.Height==height)return;if(Native.SetWindowPos(Handle,IntPtr.Zero,x,y,width,height,0x0014))PositionUpdates++;}
   }
   sealed class Bubble:TimerWindow {
-    readonly Ellipse ring;readonly ShapePath arc;readonly Border surface;readonly Button button;
+    readonly Ellipse ring;readonly ShapePath arc;readonly Border surface;readonly Button button;readonly TextBlock contextText;string timerStatus="";
     public bool Dragging {get;private set;}bool moved,pending,renderAttached;int pendingX,pendingY;Native.POINT down;Native.RECT origin;
     string paintedKey;
     public Action Clicked,Dragged,PositionChanged,DragStarted,DragEnded;
@@ -125,7 +125,8 @@ namespace RingTimer {
       // button reports progress without opening the panel.
       arc=new ShapePath{Stroke=Theme.Running,StrokeThickness=2,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round,Visibility=Visibility.Collapsed,IsHitTestVisible=false};
       canvas.Children.Add(arc);
-      foreach(int x in new[]{10,16})foreach(int y in new[]{10,16}){var dot=new Rectangle{Width=2,Height=2,RadiusX=.7,RadiusY=.7,Fill=Theme.Running};Canvas.SetLeft(dot,x);Canvas.SetTop(dot,y);canvas.Children.Add(dot);}
+      contextText=Theme.Text("—",10,Theme.Muted);contextText.FontFamily=Theme.NumberFont;contextText.FontWeight=FontWeights.SemiBold;
+      var contextBox=new Viewbox{Width=20,Height=16,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,Child=contextText,IsHitTestVisible=false};Canvas.SetLeft(contextBox,4);Canvas.SetTop(contextBox,6);canvas.Children.Add(contextBox);
       L.Bind(button,FrameworkElement.ToolTipProperty,"打开小菜单 · 拖动换位置");button.Content=surface;Content=button;
       button.MouseEnter+=(s,e)=>PaintHover(true);button.MouseLeave+=(s,e)=>PaintHover(false);
       button.Click+=(s,e)=>{if(!moved&&Clicked!=null)Clicked();};
@@ -147,13 +148,14 @@ namespace RingTimer {
     void DetachRendering(){if(renderAttached){CompositionTarget.Rendering-=OnDragFrame;renderAttached=false;}}
     internal void EndDrag(){if(!Dragging)return;FlushDragFrame();DetachRendering();bool didMove=moved;Dragging=false;moved=false;if(didMove&&Dragged!=null)Dragged();if(DragEnded!=null)DragEnded();PaintHover(button.IsMouseOver);}
     public void PaintState(){}
+    public void SetContext(ContextUsage usage){contextText.Text=usage.Display;contextText.Foreground=usage.Known?ContextFeature.Ink(usage):Theme.Muted;string name=L.T("已用上下文")+" "+usage.Display;AutomationProperties.SetName(contextText,name);AutomationProperties.SetName(button,L.T("打开小菜单")+" · "+name);button.ToolTip=L.T("打开小菜单")+" · "+timerStatus+"\n"+name;}
     public void SetStatus(string text,string status){SetStatus(text,status,1);}
     // progress is the remaining fraction (1 = full ring, 0 = empty).
     public void SetStatus(string text,string status,double progress){
       if(progress<0)progress=0;if(progress>1)progress=1;
       int step=(int)Math.Round(progress*720);string key=text+"|"+status+"|"+step;
       if(paintedKey==key)return;paintedKey=key;
-      button.ToolTip=L.T("打开小菜单")+" · "+text;
+      timerStatus=text;button.ToolTip=L.T("打开小菜单")+" · "+text;
       Brush color=status=="finished"?Theme.Done:status=="paused"?Theme.Paused:Theme.Running;
       bool full=status=="idle"||status=="finished"||progress>=0.999||step==720;
       ring.Stroke=full?(status=="idle"?Theme.Running:color):Theme.Track;
