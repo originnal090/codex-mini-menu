@@ -8,8 +8,10 @@
 - [x] Unify docked launcher glass and remove the cutout beneath its transparent face, preserving closed-menu launcher appearance and input.
 - [x] Implement conic border, visible breathing glow and efficient retained/cached rendering; eliminate redundant outer rim drawing.
 - [x] Add material, lifecycle and lighting regressions. Verify rendering cadence, visuals and full data/UI suite.
-- [ ] Build/install 2.16.0 with backups and matching hashes; report measured results precisely.
+- [x] Build/install 2.16.0 with backups and matching hashes; report measured results precisely.
 
 Review focus: desktop drag at all screen edges, simultaneous native motion and theme lighting, continuous launcher material at return, hidden/reduced-motion lifecycle, theme changes during duration editing.
 
 Verification: TestUI 4627 checks passed. Unique render updates: tilt 105.9/s, drag 117.0/s; both budget checks passed. Review: screen-clamped glass extension corrected and all eight edge assertions passed. Package includes AGENTS.md.
+
+Deployment complete: local installation and plugin cache updated to 2.16.0; previous 2.15.0 installation backed up. SHA-256 EF787E5495CCF14D129E0FAD940570F84A80EBA537B28F3FFA7588D2DB694D21.
