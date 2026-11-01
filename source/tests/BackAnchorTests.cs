@@ -27,6 +27,9 @@ class BackAnchorTests {
   var back=(Button)typeof(MenuWindow).GetField("back",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(menu);
   IntPtr handle=menu.Handle;Point anchor=Center(back);var heights=new List<int>();
   Check(back.ActualHeight>=40,"return hit target remains generous");
+  var arc=back.TranslatePoint(new Point(back.ActualHeight/2,back.ActualHeight/2),menu.CardSurface);
+  Check(Distance(arc,new Point(Theme.MenuRadius,menu.CardSurface.ActualHeight-Theme.MenuRadius))<.6,"return capsule shares the lower-left card corner center");
+  Check(Math.Abs(Center(back).Y-(bubble.PixelBounds.Top+bubble.PixelBounds.Height/2.0))<1,"return and launcher share a horizontal centerline");
   foreach(string page in new[]{"Language","Appearance","Sound"}){
    double maxDrift=0;EventHandler sample=(s,e)=>maxDrift=Math.Max(maxDrift,Distance(Center(back),anchor));CompositionTarget.Rendering+=sample;
    typeof(MenuWindow).GetMethod("Open"+page+"Settings").Invoke(menu,null);Wait(260);CompositionTarget.Rendering-=sample;
@@ -47,6 +50,8 @@ class BackAnchorTests {
   menu.ClosePanel();Wait(65);menu.Reveal();Wait(330);Check(menu.IsVisible&&!menu.IsClosing&&Distance(Center(back),after)<=1.5,"collapse reversal preserves return position");
   menu.Above=false;bubble.MovePixels(area.Right-120,area.Top+80);menu.PresentationRequested();menu.OpenSettings();Wait(280);Point below=Center(back);menu.OpenLanguageSettings();Wait(280);
   Check(Distance(Center(back),below)<=1.5,"screen-edge mirrored layout keeps return beside launcher");
+  arc=back.TranslatePoint(new Point(back.ActualHeight/2,back.ActualHeight/2),menu.CardSurface);
+  Check(Distance(arc,new Point(Theme.MenuRadius,Theme.MenuRadius))<.6,"mirrored return capsule shares the upper-left card corner center");
   L.SetLanguage("en");Theme.Apply(false,null,null,null);Wait(250);Theme.Snapshot(menu,Path.Combine(args[0],"Language-light-en.png"),1.5);
   Check(timer.State.Deadline==deadline&&timer.State.Status=="running","navigation preserves running timer");
   Console.WriteLine(checks+" return anchor checks passed");return 0;

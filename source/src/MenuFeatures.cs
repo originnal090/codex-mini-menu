@@ -113,7 +113,11 @@ namespace RingTimer {
     public bool OpenFeature(string id){var feature=registry.Find(id);if(feature==null)return false;if(active==feature){feature.Refresh();return true;}CardPresenter.Reset();navigationHeight=surface.ActualHeight;preparing=true;try{settingsPage=null;active=feature;title.Text=feature.Title;SetBack(false);body.Content=feature.View;pageScroll.ScrollToTop();feature.Refresh();}finally{preparing=false;}RequestPresentation(true);AnimatePage(8);return true;}
     public void Refresh(){if(active!=null)active.Refresh();else foreach(var f in registry.Features){TextBlock label;if(summaries.TryGetValue(f.Id,out label)&&label.Text!=f.Summary)label.Text=f.Summary;}RequestPresentation();}
     double PageCapacity(){if(WorkingHeight!=null)return Math.Max(80,WorkingHeight()-162);var anchor=AnchorBounds==null?null:AnchorBounds();var screen=anchor.HasValue?System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(anchor.Value.Left,anchor.Value.Top)):System.Windows.Forms.Screen.FromHandle(Handle);return Math.Max(80,screen.WorkingArea.Height/Native.ScaleFor(Handle)-162);}
-    Size NaturalSize(){var handle=Handle;surface.Padding=Above?new Thickness(24,24,24,64):new Thickness(24,64,24,24);back.VerticalAlignment=Above?VerticalAlignment.Bottom:VerticalAlignment.Top;back.Margin=Above?new Thickness(0,0,0,-58):new Thickness(0,-58,0,0);
+    Size NaturalSize(){var handle=Handle;surface.Padding=Above?new Thickness(24,24,24,64):new Thickness(24,64,24,24);back.VerticalAlignment=Above?VerticalAlignment.Bottom:VerticalAlignment.Top;
+      double backInset=Theme.MenuRadius-back.Height/2;
+      double backX=backInset-surface.Padding.Left-surface.BorderThickness.Left;
+      double backY=backInset-(Above?surface.Padding.Bottom+surface.BorderThickness.Bottom:surface.Padding.Top+surface.BorderThickness.Top);
+      back.Margin=Above?new Thickness(backX,0,0,backY):new Thickness(backX,backY,0,0);
       // Circular controls share the center of the outer corner arc. The header
       // shifts with its close button; body and return positions remain fixed.
       double cornerInset=Theme.MenuRadius-close.Width/2-25;

@@ -1,5 +1,7 @@
 # Codex Mini Menu
 
+**2.14.1:** Align the Back capsule with the launcher and the card corner, including the mirrored layout.
+
 **2.14.0: Refined card motion.** Concentric corner controls, consistent text rendering and a launcher that tilts with the card. Separate reflection rendering and cached content improve animation performance. See [measurements and tradeoffs](docs/card-refinement-2.14.0.md).
 
 **2.13.0: Silver glass card.** Hold the right mouse button and move to tilt the entire live menu. Silver highlights follow the angle; release to return smoothly. Timers keep updating throughout. See the [upgrade details](docs/silver-card-2.13.0.md).
