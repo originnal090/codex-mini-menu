@@ -1,62 +1,96 @@
 # Codex 小菜单
 
-[English](README.md) · [下载](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip)
+**跟随 Codex 的 Windows 悬浮工具菜单。** 从圆环扩散展开，跟随主题切换配色，以鼠标追踪高光、可调透明度和磨砂玻璃质感融入桌面。内置工作／休息计时与打卡式活动热力图，更多实用工具持续扩展中。
 
-![滑轨与按钮交互](docs/images/interactions.gif)
+**Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English**
 
-*使用实际 WPF 控件录制。滑块覆盖到的文字实时换色，按键按下压缩、释放回弹。*
+[English](README.md) · **简体中文** · [下载安装](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
 
-![计时器](docs/images/timer.png)
+## 从圆环展开的小菜单
 
-![统计](docs/images/statistics.png)
+点击悬浮圆环，菜单从圆环所在位置扩散展开，收起时回到原处。悬浮入口跟随当前 Codex 窗口，也可以自由拖动；进入计时或统计后，左下角可返回菜单。
 
-*统计截图为演示数据。*
+<p align="center"><img src="docs/images/menu-opening.gif" width="390" alt="小菜单从悬浮圆环展开和收起"></p>
 
-点击悬浮圆环打开小菜单。计时器和统计是菜单中的功能模块，左下角返回主页，收起窗口后继续计时。
+## 跟随 Codex 主题与配色
 
-## 工作与休息
+读取 Codex 的外观配置，自动跟随明暗主题及配色变化。背景、文字、控件和强调色一起调整；切换外观时继续保留当前计时状态。
 
-- 设置工作时长和休息时长，两段合为一组。点击时长卡片，用时、分、秒滚轮编辑，每段支持 1 秒至 24 小时。
-- 默认执行 1 组；可以输入 1–99 组。工作结束自动进入休息，休息结束后按组数继续，最后一组结束后等待再次开始。
-- 环形进度显示当前阶段的剩余时间，工作绿色、休息蓝色。运行期间可暂停、继续或结束本次循环。
-- 暂停期间不累计时间；手动结束会保留已执行的工作和休息时长。关闭程序、休眠后恢复时，按原定时间推进到相应阶段或结束。
-- 提示音开关在设置 → 提示音，音频选择、试听和恢复默认也在此页。
+<table>
+<tr><th>深色主题</th><th>浅色主题</th></tr>
+<tr><td><img src="docs/images/timer-zh-CN.png" width="280" alt="深色主题"></td><td><img src="docs/images/light-zh-CN.png" width="280" alt="浅色主题"></td></tr>
+</table>
 
-## 统计
+## 鼠标追踪与细腻的操作反馈
 
-- 今日摘要分别显示工作与休息的实际时长，包含当前正在进行的阶段。
-- 日历、总量、分段使用可拖动轨道，支持点击、触摸和左右方向键；按下时从原位置滑向鼠标，拖动带轻微阻尼，松手平滑吸附，文字按滑块实际覆盖位置实时换色。
-- 日历可选择工作或休息热力图，每屏 13 周，可翻阅历史；点击日期查看当天分段。
-- 总量提供日、周、月的工作／休息堆叠柱状图。周从周一开始，月按自然月。
-- 分段以不同颜色显示工作与休息，暂停会拆分为多个有效时段。
-- 旧版单次计时记录归入工作，原有休息分类保留。历史记录按本地午夜拆分，唯一记录 ID 防止重复累计。
-- 数据在用户目录 `.codex/timer-data`；统计保存失败保留待写队列，自动重试。
+鼠标移动时，柔和高光随指针在菜单表面移动。统计滑轨带轻微阻尼，滑块覆盖到的文字即时换色；按钮按下时弹性压缩并出现内阴影，释放后轻微回弹。
 
-## 交互与设置
+<p align="center"><img src="docs/images/pointer-tracking.gif" width="390" alt="鼠标移动时的表面高光"></p>
+<p align="center"><img src="docs/images/interactions.gif" width="489" alt="滑轨阻尼、实时文字换色和按钮回弹"></p>
 
-按键按下时弹性压缩并显示内阴影，释放后轻微超调回弹。系统关闭界面动画时直接显示终态。保留鼠标跟随高光、语言、外观与声音设置，以及悬浮按钮位置设置。
+*鼠标追踪录像保留实际高光强度，光标标记用于指示录制时的鼠标位置。系统关闭动画时直接显示终态。*
 
-系统错误弹窗通过所属关系解析到 Codex 主窗口；独立对话框和工具窗口不会成为悬浮按钮的宿主。
+## 打卡式热力图：看见专注的积累
 
-## 安装
+热力图根据实际计时记录自动生成。每屏展示 13 周，可切换工作／休息、翻阅历史，并点击日期查看当天分段。总量视图按日、周、月汇总，两类时间使用不同颜色。
 
-Windows 10/11：通过 Code → Download ZIP 下载并完整解压，双击 `install.cmd`。已有安装会保留计时状态、历史和偏好。依赖 Windows 自带的 .NET Framework 4.8。
+<table>
+<tr><th>每日活动热力图</th><th>工作／休息分类统计</th></tr>
+<tr><td><img src="docs/images/heatmap-zh-CN.png" width="280" alt="每日活动热力图"></td><td><img src="docs/images/totals-zh-CN.png" width="280" alt="工作／休息分类统计"></td></tr>
+</table>
 
-中文使用微软雅黑，数字使用随包 Roboto；字体许可证见 `plugin/assets/fonts/LICENSE-Roboto.txt`。
+*统计图片使用演示数据。暂停时间不计入；当前正在进行的时间也会显示，重置会保留已经执行的有效时长。*
 
-## 验证
+## 可调透明度与磨砂玻璃质感
 
-源码在 `source/src`，测试在 `source/tests`。执行 `source/scripts/build.ps1` 构建程序；循环、统计、交互、菜单结构和窗口跟随分别由 `test-cycle.ps1`、`test-stats.ps1`、`test-work-rest.ps1`、`test-structure.ps1`、`test-host-selection.ps1` 和 `test-window.ps1` 验证。
+在 **设置 → 外观** 中将透明度调到 0–90%，菜单、计时器和悬浮圆环同步生效。半透明填充、渐变边缘与背景模糊形成玻璃层次，让菜单与桌面背景自然融合。
 
-## 从源码构建
+<table>
+<tr><th>较低透明度 · 15%</th><th>较高透明度 · 75%</th></tr>
+<tr><td><img src="docs/images/glass-15.png" width="280" alt="较低透明度 · 15%"></td><td><img src="docs/images/glass-75.png" width="280" alt="较高透明度 · 75%"></td></tr>
+</table>
 
-在 Windows PowerShell 中运行：
+*上图在统一的演示背景上实拍；录制环境关闭了系统模糊，显示为半透明表面。背景模糊取决于 Windows 合成能力和系统透明效果设置，具体观感会随桌面背景变化。*
+
+## 提示音由你选择
+
+在 **设置 → 提示音** 中随时开关提醒、选择自己的 WAV / MP3 文件、试听或恢复系统默认音效。
+
+<p align="center"><img src="docs/images/sound-zh-CN.png" width="300" alt="提示音开关、音频文件选择和试听"></p>
+
+## 工作与休息，按组执行
+
+- 工作与休息时长分别设置，每段支持 **1 秒至 24 小时**，通过时／分／秒滚轮调整。
+- 一组包含 **工作 → 休息**。默认执行一组，也可指定 **1–99 组**，最后一组结束后等待再次开始。
+- 环形进度显示阶段、剩余时间和组数，支持暂停、继续与重置。
+- 收起菜单后继续计时。休眠或退出期间不能即时提醒；恢复后按绝对截止时间推进到相应阶段或结束。
+
+## 安装与开始使用
+
+1. 点击 [下载 ZIP](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip)，或使用仓库的 **Code → Download ZIP**。
+2. 完整解压，运行 **`install.cmd`**。
+3. 从桌面快捷方式 **Codex Mini Menu** 打开；也可以通过系统托盘打开菜单、恢复位置或退出。
+
+安装器会注册本地 Codex 插件并创建快捷方式。升级保留计时状态和偏好。运行依赖 .NET Framework 4.8；无需 Node.js 或 Python。卸载请运行 `uninstall.cmd`。
+
+计时状态、外观、声音偏好与历史保存在 `%USERPROFILE%\.codex\timer-data`。
+
+## 构建与验证
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1
+powershell -ExecutionPolicy Bypass -File source/scripts/test-cycle.ps1
+powershell -ExecutionPolicy Bypass -File source/scripts/test-stats.ps1
+powershell -ExecutionPolicy Bypass -File source/scripts/test-work-rest.ps1
 powershell -ExecutionPolicy Bypass -File source/scripts/package.ps1
 ```
 
-安装包生成在 `dist/`。GitHub Release 可附加该 ZIP，用户完整解压后运行 `install.cmd`。
+在 Windows PowerShell 中运行。安装包生成在 `dist/`；UI 验证需要交互式 Windows 桌面。源码位于 `source/src/`，测试位于 `source/tests/`，构建与验证脚本位于 `source/scripts/`。
 
-仓库中的测试使用独立测试目录；个人计时数据、安装备份和测试生成文件不纳入版本控制。Roboto 字体保留其原许可证；项目源码的开源许可证由维护者另行指定。
+## 参与项目
+
+欢迎通过 [Issues](https://github.com/originnal090/codex-mini-menu/issues) 提交建议和问题，或 Fork 后提交 Pull Request，说明改动和验证结果，由维护者审核。
+
+## 字体与许可
+
+界面使用微软雅黑与 Roboto。Roboto 的许可证见 [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt)；项目源码许可证尚未指定。本项目是面向 Codex 的独立社区工具。

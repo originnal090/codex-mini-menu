@@ -1,70 +1,81 @@
 # Codex Mini Menu
 
-A lightweight floating utility menu for Codex, featuring work/rest timers and activity statistics, with more tools to come.
+**A floating Windows utility menu that follows Codex.** Expand from a circular launcher, match the Codex theme, and enjoy pointer-following highlights, adjustable transparency and a frosted-glass finish. Built-in work/rest timers and a contribution-style activity heatmap help you track your focus, with more tools to come.
 
 **Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文**
 
-[简体中文](README.zh-CN.md) · [Download](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip) · [Report an issue](https://github.com/originnal090/codex-mini-menu/issues)
+**English** · [简体中文](README.zh-CN.md) · [Download](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip) · [Issues & ideas](https://github.com/originnal090/codex-mini-menu/issues)
 
-## See it in motion
+## A menu that expands from its launcher
 
-![Native slider and button interactions](docs/images/interactions.gif)
+Click the floating ring to expand the menu from its position; closing brings it back. The launcher follows the active Codex window and can be dragged to a comfortable position. Use the lower-left back button to return from a tool to the menu.
 
-The slider follows your pointer with subtle damping. Text changes color exactly where the thumb passes, including during the settling animation. Buttons compress on press and gently rebound on release.
+<p align="center"><img src="docs/images/menu-opening.gif" width="390" alt="Menu expanding from and collapsing into the floating launcher"></p>
 
-*Captured from the application's native WPF controls in a dedicated demonstration surface. The GIF loops; animation smoothness depends on your viewer.*
+## Colors that follow your Codex theme
 
-## A small menu, ready for more tools
-
-The floating launcher follows the active Codex window. Open the menu, choose a tool, and return using the back button. You can drag the launcher to a comfortable position, and the timer keeps running when the panel is closed.
+The menu reads Codex's appearance configuration and follows its light/dark theme and palette. Backgrounds, text, controls and accents update together while your timer state stays intact.
 
 <table>
-<tr><th>Mini menu</th><th>Work / rest timer</th><th>Activity statistics</th></tr>
-<tr>
-<td><img src="docs/images/menu.png" width="260" alt="Mini menu with timer and statistics entries"></td>
-<td><img src="docs/images/timer.png" width="260" alt="Circular countdown with work and rest duration controls"></td>
-<td><img src="docs/images/statistics.png" width="260" alt="Daily work and rest statistics in the light theme"></td>
-</tr>
+<tr><th>Dark theme</th><th>Light theme</th></tr>
+<tr><td><img src="docs/images/timer-en.png" width="280" alt="Dark theme"></td><td><img src="docs/images/light-en.png" width="280" alt="Light theme"></td></tr>
 </table>
 
-*Screenshots show both supported languages and themes. Statistics use demonstration data.*
+## Pointer tracking and tactile interactions
 
-## Features
+A subtle surface highlight follows your pointer. Drag the statistics selector with gentle damping; text changes color exactly where the thumb passes. Buttons compress with an inset shadow, then gently rebound on release.
 
-- **Work / rest cycles.** Configure each phase from 1 second to 24 hours. One group contains work followed by rest; run 1–99 groups, then wait for your next start. The default is one group.
-- **Circular progress.** See the current phase, remaining time and group count. Pause, resume or reset from the timer panel.
-- **Separate statistics.** Work and rest have distinct totals and colors. Explore a 13-week calendar, daily / weekly / monthly totals, and a timeline of individual active spans.
-- **Actual active time.** Pauses are excluded. Resetting a running cycle retains time already spent. Current elapsed time is included in the statistics display.
-- **Responsive interactions.** Drag the statistics selector with a mouse or touch, or use the arrow keys. Buttons provide elastic feedback, and surfaces respond to pointer movement.
-- **Personal settings.** English and Simplified Chinese, appearance controls, and optional reminder sounds with custom audio and preview.
-- **Local storage.** Timer state, preferences and history are stored in `%USERPROFILE%\.codex\timer-data`.
+<p align="center"><img src="docs/images/pointer-tracking.gif" width="390" alt="Subtle surface highlight following the mouse"></p>
+<p align="center"><img src="docs/images/interactions.gif" width="489" alt="Damped slider, live text contrast and elastic button feedback"></p>
 
-More utility modules are planned. The current release includes the timer and statistics modules.
+*The pointer recording preserves the actual highlight intensity; a cursor marker indicates the recorded mouse position. When system animations are disabled, controls show their final state immediately.*
 
-## Install
+## A contribution-style heatmap for your focus
 
-1. Use **Code → Download ZIP**, or the [download link](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip).
-2. Extract the entire archive.
-3. Run **`install.cmd`** from the extracted folder.
-4. Open **Codex Mini Menu** from the desktop shortcut. The tray menu also provides open, position reset and exit actions.
+The activity heatmap is generated automatically from actual timer records. Explore 13 weeks at a time, switch between work and rest, browse earlier dates, or select a day for its session timeline. Totals offer daily, weekly and monthly breakdowns with distinct work/rest colors.
 
-The installer registers the local Codex plugin and creates shortcuts. Upgrading preserves your timer state and preferences. Windows includes the required .NET Framework on supported installations; the application does not require a Node.js or Python runtime.
+<table>
+<tr><th>Daily activity heatmap</th><th>Separate work / rest totals</th></tr>
+<tr><td><img src="docs/images/heatmap-en.png" width="280" alt="Daily activity heatmap"></td><td><img src="docs/images/totals-en.png" width="280" alt="Separate work / rest totals"></td></tr>
+</table>
 
-Run **`uninstall.cmd`** to uninstall. For portable inspection before installation, the compiled application is in `plugin/bin/`.
+*Statistics shown here use demonstration data. Pauses are excluded; live elapsed time is included, and resetting retains active time already recorded.*
 
-## How a cycle works
+## Adjustable transparency and frosted glass
 
-```text
-Work → Rest → next group … → final rest ends → wait
-```
+Set transparency from 0–90% in **Settings → Appearance**. The menu, timer and floating ring update together. Translucent fills, gradient edges and background blur create a layered glass finish that blends with your desktop.
 
-Configure durations and group count before starting. Sound controls are under **Settings → Sound**. Returning to the menu or closing the panel keeps the timer active.
+<table>
+<tr><th>Lower transparency · 15%</th><th>Higher transparency · 75%</th></tr>
+<tr><td><img src="docs/images/glass-15.png" width="280" alt="Lower transparency · 15%"></td><td><img src="docs/images/glass-75.png" width="280" alt="Higher transparency · 75%"></td></tr>
+</table>
 
-The countdown follows an absolute deadline. After sleep or an application restart, it catches up to the appropriate phase or completion. Notifications cannot play while the application is closed or Windows is asleep.
+*Captured against the same demonstration backdrop with system blur disabled (translucent fallback). Background blur depends on Windows composition support and system transparency settings; its appearance also varies with the background.*
 
-## Build and test
+## Choose your reminder sound
 
-Use Windows PowerShell with .NET Framework 4.8 installed:
+In **Settings → Sound**, toggle reminders, choose a custom WAV / MP3 file, preview it, or restore the system default.
+
+<p align="center"><img src="docs/images/sound-en.png" width="300" alt="Reminder sound toggle, audio selection and preview"></p>
+
+## Work and rest in configurable groups
+
+- Set work and rest separately, from **1 second to 24 hours** per phase, using hour/minute/second wheels.
+- A group is **work → rest**. Run one group by default, or choose **1–99 groups**, then wait for the next start.
+- Circular progress shows the phase, remaining time and group count. Pause, resume or reset at any time.
+- Closing the panel keeps the timer running. After sleep or an application restart, it catches up using its absolute deadline. Reminders cannot play while the application is closed or Windows is asleep.
+
+## Install and get started
+
+1. [Download the ZIP](https://github.com/originnal090/codex-mini-menu/archive/refs/heads/main.zip), or use **Code → Download ZIP**.
+2. Extract the entire archive and run **`install.cmd`**.
+3. Open the **Codex Mini Menu** desktop shortcut. The tray menu also provides open, position reset and exit actions.
+
+The installer registers the local Codex plugin and creates shortcuts. Upgrading preserves state and preferences. Requires .NET Framework 4.8; no Node.js or Python runtime is needed. Run `uninstall.cmd` to uninstall.
+
+State, appearance, sound preferences and history are stored locally in `%USERPROFILE%\.codex\timer-data`.
+
+## Build and verify
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1
@@ -74,22 +85,12 @@ powershell -ExecutionPolicy Bypass -File source/scripts/test-work-rest.ps1
 powershell -ExecutionPolicy Bypass -File source/scripts/package.ps1
 ```
 
-`build.ps1` runs the core timer checks and builds the executable. `package.ps1` creates a complete distributable ZIP under `dist/`. Additional scripts cover menu navigation, settings, statistics views, host selection and real Windows window-follow behavior. UI tests require an interactive Windows desktop.
+Run these commands in Windows PowerShell. Packages are generated under `dist/`; UI tests require an interactive Windows desktop. Implementation lives in `source/src/`, tests in `source/tests/`, and build/verification scripts in `source/scripts/`.
 
-```text
-plugin/          Local plugin, modules, assets and compiled application
-source/src/      C# / WPF implementation
-source/tests/    Regression tests and native demo capture
-source/scripts/  Build, verification and packaging scripts
-docs/images/     Screenshots and animation
-```
+## Contribute
 
-## Contributing
+Share suggestions and bugs through [Issues](https://github.com/originnal090/codex-mini-menu/issues), or fork the repository and open a pull request with the behavior change and validation details for maintainer review.
 
-Bug reports and suggestions are welcome through [Issues](https://github.com/originnal090/codex-mini-menu/issues). For code changes, fork the repository and open a pull request describing the behavior and relevant validation. Pull requests are reviewed by the maintainer before acceptance.
+## Fonts and licensing
 
-## Credits and licensing
-
-The interface uses Microsoft YaHei and the bundled Roboto font. Roboto's license is included in [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt). A license for the project source has not yet been selected.
-
-This is an independent community project for use with Codex.
+The interface uses Microsoft YaHei and Roboto. Roboto’s license is included in [LICENSE-Roboto.txt](plugin/assets/fonts/LICENSE-Roboto.txt); a project source license has not yet been selected. This is an independent community project for use with Codex.
