@@ -109,6 +109,9 @@ namespace RingTimer {
     public void SetBoundsPixels(int x,int y,int width,int height){var current=PixelBounds;if(current.Left==x&&current.Top==y&&current.Width==width&&current.Height==height)return;if(Native.SetWindowPos(Handle,IntPtr.Zero,x,y,width,height,0x0014))PositionUpdates++;}
   }
   sealed class Bubble:TimerWindow {
+    bool projectionSuppressed;
+    internal void SuppressForProjection(bool suppress){projectionSuppressed=suppress;var handle=new WindowInteropHelper(this).Handle;if(handle==IntPtr.Zero)return;var r=PixelBounds;if(suppress)GlassBackdrop.SuppressShape(handle);else GlassBackdrop.Shape(handle,r.Width,r.Height,Native.ScaleFor(handle),true);}
+    protected override void UpdateWindowShape(){if(!projectionSuppressed)base.UpdateWindowShape();}
     readonly Ellipse ring;readonly ShapePath arc;readonly Border surface;readonly Button button;readonly TextBlock contextText;string timerStatus="";
     public bool Dragging {get;private set;}bool moved,pending,renderAttached;int pendingX,pendingY;Native.POINT down;Native.RECT origin;
     string paintedKey;

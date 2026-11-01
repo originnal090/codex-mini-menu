@@ -1,5 +1,7 @@
 # Codex Mini Menu
 
+**2.15.0: Faster floating editors and theme lighting.** Duration editors open in 190 ms, with compact spacing, smoother reflective light and launcher handoff. A rotating theme border and breathing bottom glow follow the current appearance. [Details and validation](docs/motion-polish-2.15.0.md)
+
 Work and rest duration islands expand into floating glass editors from their own positions. Backdrop blur increases smoothly from zero and reverses on dismissal. [Interaction details](docs/duration-float.md)
 
 <p align="center"><img src="docs/images/duration-float.gif" width="320" alt="Work and rest duration panels expand with progressive backdrop blur"></p>

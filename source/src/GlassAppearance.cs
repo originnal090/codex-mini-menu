@@ -91,6 +91,8 @@ namespace RingTimer {
     [StructLayout(LayoutKind.Sequential)]struct RegionPoint{public int X,Y;public RegionPoint(Point p){X=(int)Math.Round(p.X);Y=(int)Math.Round(p.Y);}}
     [DllImport("gdi32.dll")]static extern IntPtr CreatePolygonRgn(RegionPoint[] points,int count,int mode);
     [DllImport("user32.dll")]static extern int SetWindowRgn(IntPtr window,IntPtr region,bool redraw);
+    [DllImport("gdi32.dll")]static extern IntPtr CreateRectRgn(int left,int top,int right,int bottom);
+    public static void SuppressShape(IntPtr window){IntPtr region=CreateRectRgn(0,0,0,0);if(region!=IntPtr.Zero&&SetWindowRgn(window,region,true)==0)DeleteObject(region);}
     public static void ProjectedShape(IntPtr window,Point[] outline,Rect hole,Point[] extension=null){
       var points=new RegionPoint[outline.Length];for(int i=0;i<points.Length;i++)points[i]=new RegionPoint(outline[i]);
       IntPtr region=CreatePolygonRgn(points,points.Length,1);if(region==IntPtr.Zero)return;

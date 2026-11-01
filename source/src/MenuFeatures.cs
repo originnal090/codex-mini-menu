@@ -59,7 +59,8 @@ namespace RingTimer {
     internal void RestoreCardContour(){lastShape=Rect.Empty;UpdateRevealGeometry();}
     internal Func<double> WorkingHeight=null;readonly ScrollViewer pageScroll;
     public bool Disposing;public Action PresentationRequested;bool preparing,resizing;Size presentedSize,presentationSize;int sizeEpoch,visibilityEpoch;double navigationHeight=Double.NaN;
-    public bool IsClosing{get;private set;}public bool Above{get;set;}public bool AnimationsEnabled{get;set;}
+    public bool IsClosing{get;private set;}public bool Above{get;set;}bool animationsEnabled;
+    public bool AnimationsEnabled{get{return animationsEnabled;}set{animationsEnabled=value;if(CardPresenter!=null)CardPresenter.RefreshAtmosphere();}}
     public string ActiveId{get{return settingsPage??(active==null?null:active.Id);}}
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition):this(features,onClose,restorePosition,new AppearanceSettings(null)){}
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition,AppearanceSettings preferences){

@@ -40,24 +40,27 @@ class DurationFloatTests {
       Theme.Snapshot(menu,Path.Combine(args[0],"timer.png"),1.5);
       foreach(string kind in new[]{"work","rest"}) {
         var source=Duration(panel,kind);var origin=Bounds(source,root);panel.OpenEditor(kind);
-        var blur=page.Effect as BlurEffect;
-        Check(blur!=null&&blur.Radius<.1,kind+" blur begins at zero");
+        var backdrop=root.Children.OfType<Image>().Single(); var blur=backdrop.Effect as BlurEffect;
+        Check(blur!=null&&backdrop.Opacity<.1&&page.Opacity==1,kind+" blur begins fully transparent");
         var editor=Editor(panel);var start=Bounds(editor,root);Console.WriteLine("GEOMETRY "+kind+" origin="+origin+" sheet="+start+" size="+editor.RenderSize);
         Check(Math.Abs(start.Left-origin.Left)<2&&Math.Abs(start.Top-origin.Top)<2&&Math.Abs(start.Width-origin.Width)<2&&Math.Abs(start.Height-origin.Height)<2,kind+" sheet originates at its own island");
-        Check(editor.Child.Opacity<.1,kind+" text waits for the panel to unfold");
+        Check(editor.Opacity*editor.Child.Opacity<.1,kind+" text fades in as the panel unfolds");
         Check(!page.IsHitTestVisible&&!menu.CanTiltCard,kind+" editor isolates background input and card tilt");
         Theme.Snapshot(menu,Path.Combine(args[0],kind+"-start.png"),1.5);
-        Pump(110);Check(blur.Radius>0&&blur.Radius<14,kind+" blur increases during lift");
+        Pump(110);Check(backdrop.Opacity>0&&backdrop.Opacity<1,kind+" blur fades in during lift");
         Theme.Snapshot(menu,Path.Combine(args[0],kind+"-lifting.png"),1.5);
-        Pump(440);Check(Math.Abs(blur.Radius-14)<.1&&editor.Child.Opacity>.99,kind+" finishes with frosted backdrop and clear content");
+        Pump(440);Check(Math.Abs(blur.Radius-14)<.1&&backdrop.Opacity>.99&&editor.Child.Opacity>.99,kind+" finishes with frosted backdrop and clear content");
         Check(editor.Background.Opacity<1&&!(editor.Effect is BlurEffect),kind+" glass is translucent and controls stay sharp");
         var count=root.Children.Count;panel.OpenEditor(kind);Check(root.Children.Count==count,kind+" repeated opening keeps one sheet");
         Theme.Snapshot(menu,Path.Combine(args[0],kind+"-open.png"),1.5);
-        panel.CancelEditor();Check(panel.IsEditing&&Math.Abs(blur.Radius-14)<.2,kind+" dismiss starts continuously");
-        Pump(90);Check(blur.Radius>=0&&blur.Radius<14,kind+" dismiss reduces blur");
-        Pump(300);Check(!panel.IsEditing&&page.Effect==null&&page.IsHitTestVisible&&source.Opacity==1,kind+" dismiss clears effects and restores island");
+        panel.CancelEditor();Check(panel.IsEditing&&backdrop.Opacity>.99,kind+" dismiss starts continuously");
+        Pump(90);Check(backdrop.Opacity>=0&&backdrop.Opacity<1,kind+" dismiss reduces blur");
+        Pump(300);Check(!panel.IsEditing&&page.Effect==null&&page.Opacity==1&&!root.Children.OfType<Image>().Any()&&page.IsHitTestVisible&&source.Opacity==1,kind+" dismiss clears effects and restores island");
       }
       Check(saves==0&&engine.State.WorkSeconds==1500&&engine.State.RestSeconds==300,"cancel leaves both durations unchanged");
+      menu.AnimationsEnabled=false;panel.OpenEditor("work");var themedBackdrop=root.Children.OfType<Image>().Single();var oldSource=themedBackdrop.Source;
+      Theme.Apply(false,null,null,"#8D2463");Pump(40);Check(themedBackdrop.Source!=oldSource&&page.Opacity==0&&panel.IsEditing,"theme switch refreshes the blurred backdrop while keeping the editor open");
+      panel.CancelEditor();Check(page.Opacity==1&&!root.Children.OfType<Image>().Any(),"theme refresh leaves no hidden page or retained backdrop after close");Theme.Apply(true,null,null,null);menu.AnimationsEnabled=true;
       panel.OpenEditor("work");Pump(450);var wheels=All<DurationWheel>(Editor(panel)).ToArray();wheels[1].SetValue(31,false);Apply(panel).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Apply(panel).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump(350);
       Check(saves==1&&engine.State.WorkSeconds==1860&&engine.State.RestSeconds==300,"work apply saves exactly once and preserves rest");
       panel.OpenEditor("rest");Pump(450);wheels=All<DurationWheel>(Editor(panel)).ToArray();wheels[1].SetValue(7,false);Apply(panel).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump(350);
@@ -65,7 +68,7 @@ class DurationFloatTests {
       foreach(int delay in new[]{0,40,120}){panel.OpenEditor("work");Pump(delay+1);panel.CancelEditor();Pump(400);Check(!panel.IsEditing&&page.Effect==null,"early cancellation leaves no overlay at "+delay+"ms");}
       panel.OpenEditor("rest");Pump(80);menu.OpenFeature("stats");Pump(100);menu.OpenFeature("timer");Pump(250);Check(!panel.IsEditing&&page.Effect==null&&page.IsHitTestVisible,"navigation clears transient editor state");
       panel.OpenEditor("work");Pump(80);menu.HideImmediately();Pump(80);menu.Reveal();Pump(350);Check(!panel.IsEditing&&page.Effect==null,"hide and reopen clears transient editor state");
-      menu.AnimationsEnabled=false;panel.OpenEditor("rest");Check(panel.IsEditing&&Math.Abs(((BlurEffect)page.Effect).Radius-14)<.1,"disabled animations opens immediately");panel.CancelEditor();Check(!panel.IsEditing&&page.Effect==null,"disabled animations closes immediately");
+      menu.AnimationsEnabled=false;panel.OpenEditor("rest");Check(panel.IsEditing&&root.Children.OfType<Image>().Single().Opacity==1,"disabled animations opens immediately");panel.CancelEditor();Check(!panel.IsEditing&&page.Effect==null,"disabled animations closes immediately");
       menu.WorkingHeight=()=>520;menu.Refresh();Pump(80);panel.OpenEditor("work");Pump(50);
       DependencyObject ancestor=panel;while(ancestor!=null&&!(ancestor is ScrollContentPresenter))ancestor=VisualTreeHelper.GetParent(ancestor);
       var viewport=(ScrollContentPresenter)ancestor;var applyBounds=Bounds(Apply(panel),viewport);

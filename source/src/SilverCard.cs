@@ -93,15 +93,17 @@ namespace RingTimer {
     readonly Grid face=new Grid{Background=Brushes.Transparent,ClipToBounds=true};
     readonly Grid cardBase=new Grid(),lightingFace=new Grid{Background=Brushes.Transparent};
     readonly SilverCardFilm brushing=new SilverCardFilm(true,false),film=new SilverCardFilm(false,true);
+    readonly CardAtmosphere atmosphere=new CardAtmosphere();
     readonly Viewport3D viewport=new Viewport3D{IsHitTestVisible=false};
     readonly Viewport2DVisual3D card=new Viewport2DVisual3D();
     readonly Viewport2DVisual3D lighting=new Viewport2DVisual3D();
     readonly PerspectiveCamera camera=new PerspectiveCamera();readonly MatrixTransform3D pose=new MatrixTransform3D();
-    Point origin;double targetPitch,targetYaw,returnPitch,returnYaw,elapsed;
+    Point origin;double targetPitch,targetYaw,returnPitch,returnYaw,elapsed,lightAmount,returnLight;
+    int handoffFrames;
     TimeSpan? lastFrame;
     IInputElement savedFocus;
     bool restoring;
-    Bubble floatingLauncher;double launcherOpacity;bool launcherHitTest;Canvas launcherLayer;
+    Bubble floatingLauncher;bool launcherHitTest;Canvas launcherLayer;
     Rect launcherRect=Rect.Empty;
     System.Windows.Shapes.Rectangle launcherCopy;
     Point[] lastContour;Rect lastHole=Rect.Empty;
@@ -116,8 +118,7 @@ namespace RingTimer {
     public SilverCardPresenter(MenuWindow owner,Border content){
       menu=owner;surface=content;ClipToBounds=true;
       TextOptions.SetTextFormattingMode(face,TextFormattingMode.Display);TextOptions.SetTextRenderingMode(face,TextRenderingMode.Grayscale);
-      cardBase.Children.Add(surface);cardBase.Children.Add(brushing);face.Children.Add(cardBase);lightingFace.Children.Add(film);Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
-      face.CacheMode=new BitmapCache{EnableClearType=false,SnapsToDevicePixels=true};
+      cardBase.Children.Add(surface);cardBase.Children.Add(brushing);face.Children.Add(cardBase);lightingFace.Children.Add(atmosphere);lightingFace.Children.Add(film);Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
       RenderOptions.SetCachingHint(card,CachingHint.Cache);RenderOptions.SetCacheInvalidationThresholdMinimum(card,.5);RenderOptions.SetCacheInvalidationThresholdMaximum(card,2);
       brushing.HorizontalAlignment=HorizontalAlignment.Left;brushing.VerticalAlignment=VerticalAlignment.Top;
       film.HorizontalAlignment=HorizontalAlignment.Left;film.VerticalAlignment=VerticalAlignment.Top;
@@ -132,21 +133,24 @@ namespace RingTimer {
       LostMouseCapture+=(s,e)=>{if(IsHeld&&!restoring)Release();};
       PreviewMouseLeftButtonDown+=(s,e)=>{if(IsPresenting)e.Handled=true;};PreviewMouseLeftButtonUp+=(s,e)=>{if(IsPresenting)e.Handled=true;};PreviewMouseWheel+=(s,e)=>{if(IsPresenting)e.Handled=true;};
       PreviewKeyDown+=(s,e)=>{if(IsPresenting&&e.Key!=Key.Escape)e.Handled=true;};
-      menu.Deactivated+=(s,e)=>{if(IsPresenting)Release();};menu.IsVisibleChanged+=(s,e)=>{if(!menu.IsVisible)Reset();};menu.Closed+=(s,e)=>Reset();
-      Loaded+=(s,e)=>{Theme.Changed+=ThemeChanged;UpdateFilm();};Unloaded+=(s,e)=>{Theme.Changed-=ThemeChanged;Reset();};
+      menu.Deactivated+=(s,e)=>{if(IsPresenting)Release();};menu.IsVisibleChanged+=(s,e)=>{RefreshAtmosphere();if(!menu.IsVisible)Reset();};menu.Closed+=(s,e)=>{atmosphere.SetMotion(false);Reset();};
+      Loaded+=(s,e)=>{Theme.Changed+=ThemeChanged;SystemParameters.StaticPropertyChanged+=SystemMotionChanged;UpdateFilm();};Unloaded+=(s,e)=>{Theme.Changed-=ThemeChanged;SystemParameters.StaticPropertyChanged-=SystemMotionChanged;atmosphere.SetMotion(false);Reset();};
     }
-    void ThemeChanged(){film.InvalidateVisual();brushing.InvalidateVisual();}
-    void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new[]{brushing,film}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}}
+    void SystemMotionChanged(object sender,System.ComponentModel.PropertyChangedEventArgs e){if(e.PropertyName=="ClientAreaAnimation")RefreshAtmosphere();}
+    internal void RefreshAtmosphere(){atmosphere.SetMotion(menu.IsVisible&&menu.AnimationsEnabled&&SystemParameters.ClientAreaAnimation);}
+    void ThemeChanged(){film.InvalidateVisual();brushing.InvalidateVisual();atmosphere.RefreshTheme();RefreshAtmosphere();}
+    void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new FrameworkElement[]{brushing,film,atmosphere}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}RefreshAtmosphere();}
     internal void Begin(Point at){
       if(menu.IsDurationEditing||IsPresenting||ActualWidth<=0||ActualHeight<=0)return;
-      savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=0;elapsed=0;lastFrame=null;
+      savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=lightAmount=0;elapsed=0;handoffFrames=0;lastFrame=null;
+      face.CacheMode=new BitmapCache{EnableClearType=false,SnapsToDevicePixels=true};
       UpdateFilm();double w=ActualWidth,h=ActualHeight;foreach(var layer in new[]{face,lightingFace}){layer.Width=w;layer.Height=h;layer.Measure(new Size(w,h));layer.Arrange(new Rect(0,0,w,h));}
       var mesh=new MeshGeometry3D{Positions=new Point3DCollection{new Point3D(-w/2,h/2,0),new Point3D(-w/2,-h/2,0),new Point3D(w/2,-h/2,0),new Point3D(w/2,h/2,0)},TextureCoordinates=new PointCollection{new Point(0,0),new Point(0,1),new Point(1,1),new Point(1,0)},TriangleIndices=new Int32Collection{0,1,2,0,2,3}};
       card.Geometry=mesh;lighting.Geometry=mesh;IsPresenting=IsHeld=true;
       IncludeLauncher(w,h);
       Children.Remove(face);Children.Remove(lightingFace);card.Visual=face;lighting.Visual=lightingFace;Children.Add(viewport);Cursor=Cursors.SizeAll;
       camera.Position=new Point3D(0,0,w/(2*Math.Tan(CardProjection.FieldOfView*Math.PI/360)));
-      ApplyPose(1);Subscribe();
+      ApplyPose(0);Subscribe();
     }
     void IncludeLauncher(double width,double height){
       var launcher=menu.Launcher;if(launcher==null||!launcher.IsVisible)return;
@@ -159,7 +163,9 @@ namespace RingTimer {
       launcherCopy=copy;
       Canvas.SetLeft(copy,rect.Left);Canvas.SetTop(copy,rect.Top);launcherLayer=new Canvas{IsHitTestVisible=false};launcherLayer.Children.Add(copy);face.Children.Add(launcherLayer);
       cardBase.Clip=new CombinedGeometry(GeometryCombineMode.Exclude,new RectangleGeometry(new Rect(0,0,width,height)),new EllipseGeometry(rect));
-      floatingLauncher=launcher;launcherOpacity=launcher.Opacity;launcherHitTest=launcher.IsHitTestVisible;launcher.Opacity=0;launcher.IsHitTestVisible=false;
+      // Keep the layered HWND and its compositor surface alive. Toggling the
+      // window opacity through zero tears down/recreates its visible surface.
+      floatingLauncher=launcher;launcherHitTest=launcher.IsHitTestVisible;launcher.SuppressForProjection(true);launcher.IsHitTestVisible=false;
       launcher.LocationChanged+=LauncherMoved;launcher.SizeChanged+=LauncherMoved;launcher.Closed+=LauncherClosed;
     }
     void LauncherMoved(object sender,EventArgs e){if(IsPresenting&&!restoring)UpdateContour();}
@@ -172,19 +178,20 @@ namespace RingTimer {
     }
     void RestoreLauncher(){
       if(launcherLayer!=null){face.Children.Remove(launcherLayer);launcherLayer=null;}launcherCopy=null;cardBase.Clip=null;launcherRect=Rect.Empty;
-      if(floatingLauncher!=null){floatingLauncher.LocationChanged-=LauncherMoved;floatingLauncher.SizeChanged-=LauncherMoved;floatingLauncher.Closed-=LauncherClosed;floatingLauncher.Opacity=launcherOpacity;floatingLauncher.IsHitTestVisible=launcherHitTest;floatingLauncher=null;}
+      if(floatingLauncher!=null){floatingLauncher.LocationChanged-=LauncherMoved;floatingLauncher.SizeChanged-=LauncherMoved;floatingLauncher.Closed-=LauncherClosed;floatingLauncher.SuppressForProjection(false);floatingLauncher.IsHitTestVisible=launcherHitTest;floatingLauncher=null;}
     }
     internal void Move(Point at){if(!IsHeld)return;targetPitch=Math.Max(-12,Math.Min(12,-(at.Y-origin.Y)/Math.Max(1,ActualHeight/2)*12));targetYaw=Math.Max(-12,Math.Min(12,(at.X-origin.X)/Math.Max(1,ActualWidth/2)*12));Subscribe();}
     internal void Release(){
-      if(!IsPresenting||!IsHeld)return;IsHeld=false;returnPitch=Pitch;returnYaw=Yaw;elapsed=0;lastFrame=null;
+      if(!IsPresenting||!IsHeld)return;IsHeld=false;returnPitch=Pitch;returnYaw=Yaw;returnLight=lightAmount;elapsed=0;lastFrame=null;
       if(IsMouseCaptured)ReleaseMouseCapture();
       if(!menu.AnimationsEnabled||!SystemParameters.ClientAreaAnimation){Reset();return;}Subscribe();
     }
     void Subscribe(){if(FrameSubscribed)return;FrameSubscribed=true;lastFrame=null;CompositionTarget.Rendering+=OnFrame;}
     void Unsubscribe(){if(!FrameSubscribed)return;CompositionTarget.Rendering-=OnFrame;FrameSubscribed=false;lastFrame=null;}
     void OnFrame(object sender,EventArgs e){var rendering=(RenderingEventArgs)e;if(lastFrame==rendering.RenderingTime)return;double dt=lastFrame.HasValue?Math.Min(.05,(rendering.RenderingTime-lastFrame.Value).TotalSeconds):1.0/60;lastFrame=rendering.RenderingTime;
-      if(IsHeld){double follow=1-Math.Exp(-dt*22);Pitch+=(targetPitch-Pitch)*follow;Yaw+=(targetYaw-Yaw)*follow;ApplyPose(1);if(Math.Abs(targetPitch-Pitch)<.005&&Math.Abs(targetYaw-Yaw)<.005){Pitch=targetPitch;Yaw=targetYaw;ApplyPose(1);Unsubscribe();}}
-      else{elapsed+=dt;double t=Math.Min(1,elapsed/.28),left=Math.Pow(1-t,3);Pitch=returnPitch*left;Yaw=returnYaw*left;ApplyPose(1-t);if(t>=1)Reset();}
+      if(handoffFrames>0){if(--handoffFrames==0)Reset();return;}
+      if(IsHeld){elapsed+=dt;double follow=1-Math.Exp(-dt*22);Pitch+=(targetPitch-Pitch)*follow;Yaw+=(targetYaw-Yaw)*follow;double attack=Math.Min(1,elapsed/.18);lightAmount=attack*attack*(3-2*attack);ApplyPose(lightAmount);if(Math.Abs(targetPitch-Pitch)<.005&&Math.Abs(targetYaw-Yaw)<.005&&attack>=1){Pitch=targetPitch;Yaw=targetYaw;ApplyPose(lightAmount);Unsubscribe();}}
+      else{elapsed+=dt;double t=Math.Min(1,elapsed/.28),left=Math.Pow(1-t,3);Pitch=returnPitch*left;Yaw=returnYaw*left;lightAmount=returnLight*(1-t*t*(3-2*t));ApplyPose(lightAmount);if(t>=1){if(floatingLauncher!=null)handoffFrames=2;else Reset();}}
     }
     void ApplyPose(double lift){
       Projection=new CardProjection(new Size(ActualWidth,ActualHeight),Pitch,Yaw);
@@ -205,10 +212,10 @@ namespace RingTimer {
     }
     internal void Reset(){
       if(restoring)return;restoring=true;
-      try{Unsubscribe();IsHeld=false;if(IsMouseCaptured)ReleaseMouseCapture();if(!IsPresenting)return;
+      try{Unsubscribe();handoffFrames=0;IsHeld=false;if(IsMouseCaptured)ReleaseMouseCapture();if(!IsPresenting)return;
         card.Visual=null;lighting.Visual=null;Children.Remove(viewport);Children.Add(face);Children.Add(lightingFace);face.Width=face.Height=lightingFace.Width=lightingFace.Height=Double.NaN;
         RestoreLauncher();
-        IsPresenting=false;Pitch=Yaw=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);UpdateLayout();UpdateFilm();menu.RestoreCardContour();
+        IsPresenting=false;Pitch=Yaw=lightAmount=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);face.CacheMode=null;UpdateLayout();UpdateFilm();menu.RestoreCardContour();
         // A return triggered by deactivation must not steal focus back from the
         // window the user just selected. The existing logical focus is retained.
         var focused=savedFocus as UIElement;if(menu.IsActive&&menu.IsVisible&&focused!=null&&focused.IsVisible&&focused.IsEnabled)Keyboard.Focus(savedFocus);savedFocus=null;
