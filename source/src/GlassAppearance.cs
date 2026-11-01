@@ -102,12 +102,13 @@ namespace RingTimer {
       if(!hole.IsEmpty){IntPtr cut=CreateEllipticRgn((int)hole.Left,(int)hole.Top,(int)hole.Right+1,(int)hole.Bottom+1);if(cut!=IntPtr.Zero){CombineRgn(region,region,cut,4);DeleteObject(cut);}}
       if(SetWindowRgn(window,region,true)==0)DeleteObject(region);
     }
-    public static void MorphShape(IntPtr window,Rect bounds,int radius,Rect hole){IntPtr region=CreateRoundRectRgn((int)bounds.Left,(int)bounds.Top,(int)bounds.Right+1,(int)bounds.Bottom+1,radius*2,radius*2);if(region==IntPtr.Zero)return;
+    public static void MorphShape(IntPtr window,Rect bounds,int radius,Rect hole,Rect extension=default(Rect)){IntPtr region=CreateRoundRectRgn((int)bounds.Left,(int)bounds.Top,(int)bounds.Right+1,(int)bounds.Bottom+1,radius*2,radius*2);if(region==IntPtr.Zero)return;
+      if(!extension.IsEmpty&&extension.Width>0&&extension.Height>0){IntPtr added=CreateEllipticRgn((int)extension.Left,(int)extension.Top,(int)extension.Right+1,(int)extension.Bottom+1);if(added!=IntPtr.Zero){CombineRgn(region,region,added,2);DeleteObject(added);}}
       if(!hole.IsEmpty){IntPtr cut=CreateEllipticRgn((int)hole.Left,(int)hole.Top,(int)hole.Right+1,(int)hole.Bottom+1);if(cut!=IntPtr.Zero){CombineRgn(region,region,cut,4);DeleteObject(cut);}}
       if(SetWindowRgn(window,region,true)==0)DeleteObject(region);
     }
     public static void Shape(IntPtr window,int width,int height,double scale,bool bubble){int inset=bubble?0:(int)Math.Round(8*scale),diameter=(int)Math.Round((bubble?44:2*Theme.MenuRadius)*scale);if(width<=2*inset||height<=2*inset)return;IntPtr region=CreateRoundRectRgn(inset,inset,width-inset+1,height-inset+1,diameter,diameter);if(region!=IntPtr.Zero&&SetWindowRgn(window,region,true)==0)DeleteObject(region);}
     internal static bool SystemTransparencyEnabled(){try{using(var key=Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")){return key==null||Convert.ToInt32(key.GetValue("EnableTransparency",1))!=0;}}catch{return false;}}
-    public static bool Enable(IntPtr window){if(!SystemTransparencyEnabled())return false;IntPtr memory=IntPtr.Zero;try{var accent=new Accent{State=3};memory=Marshal.AllocHGlobal(Marshal.SizeOf(accent));Marshal.StructureToPtr(accent,memory,false);var data=new Composition{Attribute=19,Data=memory,Size=Marshal.SizeOf(accent)};return SetWindowCompositionAttribute(window,ref data)!=0;}catch(EntryPointNotFoundException){return false;}finally{if(memory!=IntPtr.Zero)Marshal.FreeHGlobal(memory);}}
+    public static bool Enable(IntPtr window,bool enabled=true){if(enabled&&!SystemTransparencyEnabled())return false;IntPtr memory=IntPtr.Zero;try{var accent=new Accent{State=enabled?3:0};memory=Marshal.AllocHGlobal(Marshal.SizeOf(accent));Marshal.StructureToPtr(accent,memory,false);var data=new Composition{Attribute=19,Data=memory,Size=Marshal.SizeOf(accent)};return SetWindowCompositionAttribute(window,ref data)!=0;}catch(EntryPointNotFoundException){return false;}finally{if(memory!=IntPtr.Zero)Marshal.FreeHGlobal(memory);}}
   }
 }

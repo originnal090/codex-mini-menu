@@ -28,6 +28,7 @@ namespace RingTimer {
     }
     void BeginEditorMotion(Button source){
       editorSource=source;editorClosing=false;
+      var host=Window.GetWindow(this) as MenuWindow;if(host!=null)host.CardPresenter.RefreshContentCache();
       var visible=new Rect(root.RenderSize);
       for(DependencyObject parent=VisualTreeHelper.GetParent(this);parent!=null;parent=VisualTreeHelper.GetParent(parent)){
         var viewport=parent as ScrollContentPresenter;if(viewport==null)continue;
@@ -112,6 +113,7 @@ namespace RingTimer {
       if(source!=null){source.BeginAnimation(OpacityProperty,null);source.Opacity=1;}
       editor=null;editorShade=null;editorSource=null;editorScale=null;editorShift=null;editorBlur=null;editorBackdrop=null;wheels=null;
       previousPageEffect=null;previousPageCache=null;editorClosing=false;EditorProgress=0;
+      var host=Window.GetWindow(this) as MenuWindow;if(host!=null)host.CardPresenter.RefreshContentCache();
       if(restoreFocus){if(ContentChanged!=null)ContentChanged();if(IsVisible&&source!=null)source.Focus();}
     }
   }

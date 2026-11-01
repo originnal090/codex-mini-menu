@@ -1,6 +1,6 @@
 {
   "name": "codex-ring-timer",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "description": "Windows 小菜单：跟随 Codex 的悬浮功能入口，内置计时、统计与当前对话上下文占比。",
   "skills": "./skills/",
   "requires_local_executor": true,

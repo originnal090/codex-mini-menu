@@ -109,7 +109,8 @@ namespace RingTimer {
     public void SetBoundsPixels(int x,int y,int width,int height){var current=PixelBounds;if(current.Left==x&&current.Top==y&&current.Width==width&&current.Height==height)return;if(Native.SetWindowPos(Handle,IntPtr.Zero,x,y,width,height,0x0014))PositionUpdates++;}
   }
   sealed class Bubble:TimerWindow {
-    bool projectionSuppressed;
+    bool projectionSuppressed,docked;
+    internal void SetDocked(bool value){docked=value;surface.Background=docked?Brushes.Transparent:Theme.GlassFill;PaintHover(false);var handle=new WindowInteropHelper(this).Handle;if(handle!=IntPtr.Zero)GlassBackdrop.Enable(handle,!docked);}
     internal void SuppressForProjection(bool suppress){projectionSuppressed=suppress;var handle=new WindowInteropHelper(this).Handle;if(handle==IntPtr.Zero)return;var r=PixelBounds;if(suppress)GlassBackdrop.SuppressShape(handle);else GlassBackdrop.Shape(handle,r.Width,r.Height,Native.ScaleFor(handle),true);}
     protected override void UpdateWindowShape(){if(!projectionSuppressed)base.UpdateWindowShape();}
     readonly Ellipse ring;readonly ShapePath arc;readonly Border surface;readonly Button button;readonly TextBlock contextText;string timerStatus="";
@@ -134,13 +135,14 @@ namespace RingTimer {
       L.Bind(button,FrameworkElement.ToolTipProperty,"打开小菜单 · 拖动换位置");button.Content=surface;Content=button;
       button.MouseEnter+=(s,e)=>PaintHover(true);button.MouseLeave+=(s,e)=>PaintHover(false);
       button.Click+=(s,e)=>{if(!moved&&Clicked!=null)Clicked();};
-      button.PreviewMouseLeftButtonDown+=(s,e)=>{Native.POINT p;Native.GetCursorPos(out p);surface.Background=Theme.Pressed;BeginDrag(p);};
+      button.PreviewMouseLeftButtonDown+=(s,e)=>{Native.POINT p;Native.GetCursorPos(out p);surface.Background=docked?Brushes.Transparent:Theme.Pressed;BeginDrag(p);};
       button.PreviewMouseMove+=(s,e)=>{if(!Dragging||e.LeftButton!=MouseButtonState.Pressed)return;Native.POINT p;Native.GetCursorPos(out p);UpdateDrag(p);};
       button.PreviewMouseLeftButtonUp+=(s,e)=>{bool dragged=moved;EndDrag();PaintHover(button.IsMouseOver);if(dragged){e.Handled=true;button.ReleaseMouseCapture();}};
       button.LostMouseCapture+=(s,e)=>EndDrag();
       Closed+=(s,e)=>{DetachRendering();Dragging=false;pending=false;};
+      SourceInitialized+=(s,e)=>SetDocked(docked);
     }
-    void PaintHover(bool over){if(Dragging)return;surface.Background=Theme.GlassFill;surface.BorderBrush=over?Theme.RimHover:Theme.GlassRim();}
+    void PaintHover(bool over){if(Dragging)return;surface.Background=docked?Brushes.Transparent:Theme.GlassFill;surface.BorderBrush=over?Theme.RimHover:Theme.GlassRim();}
     internal void BeginDrag(Native.POINT point){if(DragStarted!=null)DragStarted();Dragging=true;moved=false;pending=false;down=point;origin=PixelBounds;}
     internal void UpdateDrag(Native.POINT point){
       if(!Dragging)return;int dx=point.X-down.X,dy=point.Y-down.Y;if(Math.Abs(dx)+Math.Abs(dy)>5)moved=true;if(!moved)return;

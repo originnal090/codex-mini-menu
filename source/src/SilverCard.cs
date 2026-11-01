@@ -72,14 +72,6 @@ namespace RingTimer {
       sweep.GradientStops.Add(new GradientStop(Silver((byte)(5+lift*14),255),center+.045));
       sweep.GradientStops.Add(new GradientStop(Colors.Transparent,center+.22));
       dc.DrawRectangle(sweep,null,bounds);
-      // Fresnel-like rim: more reflection at the edge, subdued over the text.
-      var rim=new LinearGradientBrush{StartPoint=new Point(.05+yaw/50,0),EndPoint=new Point(.95,1)};
-      rim.GradientStops.Add(new GradientStop(Silver((byte)(110+lift*100),255),0));
-      rim.GradientStops.Add(new GradientStop(Silver(25,230),.28));
-      rim.GradientStops.Add(new GradientStop(Silver((byte)(60+lift*80),255),.58));
-      rim.GradientStops.Add(new GradientStop(Silver(Theme.IsDark?(byte)28:(byte)70,80),1));
-      dc.DrawRoundedRectangle(null,new Pen(rim,1.5),new Rect(1,1,w-2,h-2),radius-1,radius-1);
-      dc.DrawRoundedRectangle(null,new Pen(new SolidColorBrush(Silver((byte)(12+lift*12),255)),.7),new Rect(3,3,w-6,h-6),radius-3,radius-3);
       }
       dc.Pop();
     }
@@ -92,8 +84,11 @@ namespace RingTimer {
     // otherwise WPF crops its empty margins and stretches the card texture.
     readonly Grid face=new Grid{Background=Brushes.Transparent,ClipToBounds=true};
     readonly Grid cardBase=new Grid(),lightingFace=new Grid{Background=Brushes.Transparent};
+    readonly System.Windows.Shapes.Path launcherBacking=new System.Windows.Shapes.Path{Fill=Theme.GlassFill,IsHitTestVisible=false};
+    Rect backingRect=Rect.Empty,backingSurface=Rect.Empty;
     readonly SilverCardFilm brushing=new SilverCardFilm(true,false),film=new SilverCardFilm(false,true);
     readonly CardAtmosphere atmosphere=new CardAtmosphere();
+    readonly BitmapCache contentCache=new BitmapCache{EnableClearType=false,SnapsToDevicePixels=true};
     readonly Viewport3D viewport=new Viewport3D{IsHitTestVisible=false};
     readonly Viewport2DVisual3D card=new Viewport2DVisual3D();
     readonly Viewport2DVisual3D lighting=new Viewport2DVisual3D();
@@ -117,8 +112,9 @@ namespace RingTimer {
     internal bool IncludesLauncher{get{return floatingLauncher!=null;}}
     public SilverCardPresenter(MenuWindow owner,Border content){
       menu=owner;surface=content;ClipToBounds=true;
+      face.CacheMode=contentCache;
       TextOptions.SetTextFormattingMode(face,TextFormattingMode.Display);TextOptions.SetTextRenderingMode(face,TextRenderingMode.Grayscale);
-      cardBase.Children.Add(surface);cardBase.Children.Add(brushing);face.Children.Add(cardBase);lightingFace.Children.Add(atmosphere);lightingFace.Children.Add(film);Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
+      cardBase.Children.Add(surface);cardBase.Children.Add(brushing);face.Children.Add(launcherBacking);face.Children.Add(cardBase);lightingFace.Children.Add(atmosphere);lightingFace.Children.Add(film);Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
       RenderOptions.SetCachingHint(card,CachingHint.Cache);RenderOptions.SetCacheInvalidationThresholdMinimum(card,.5);RenderOptions.SetCacheInvalidationThresholdMaximum(card,2);
       brushing.HorizontalAlignment=HorizontalAlignment.Left;brushing.VerticalAlignment=VerticalAlignment.Top;
       film.HorizontalAlignment=HorizontalAlignment.Left;film.VerticalAlignment=VerticalAlignment.Top;
@@ -138,12 +134,21 @@ namespace RingTimer {
     }
     void SystemMotionChanged(object sender,System.ComponentModel.PropertyChangedEventArgs e){if(e.PropertyName=="ClientAreaAnimation")RefreshAtmosphere();}
     internal void RefreshAtmosphere(){atmosphere.SetMotion(menu.IsVisible&&menu.AnimationsEnabled&&SystemParameters.ClientAreaAnimation);}
+    internal void RefreshContentCache(){face.CacheMode=menu.IsDurationEditing&&!IsPresenting?null:contentCache;}
+    internal void UpdateLauncherBacking(Rect rect){
+      var at=surface.TranslatePoint(new Point(),face);var cardRect=new Rect(at,new Size(surface.ActualWidth,surface.ActualHeight));if(rect==backingRect&&cardRect==backingSurface)return;
+      backingRect=rect;backingSurface=cardRect;
+      if(rect.IsEmpty){launcherBacking.Data=null;return;}
+      // Extend the same glass only where a screen-clamped launcher protrudes
+      // beyond the card, so their overlapping interior is painted exactly once.
+      var outside=new CombinedGeometry(GeometryCombineMode.Exclude,new EllipseGeometry(rect),new RectangleGeometry(cardRect,Theme.MenuRadius,Theme.MenuRadius));outside.Freeze();launcherBacking.Data=outside;
+    }
     void ThemeChanged(){film.InvalidateVisual();brushing.InvalidateVisual();atmosphere.RefreshTheme();RefreshAtmosphere();}
     void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new FrameworkElement[]{brushing,film,atmosphere}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}RefreshAtmosphere();}
     internal void Begin(Point at){
       if(menu.IsDurationEditing||IsPresenting||ActualWidth<=0||ActualHeight<=0)return;
       savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=lightAmount=0;elapsed=0;handoffFrames=0;lastFrame=null;
-      face.CacheMode=new BitmapCache{EnableClearType=false,SnapsToDevicePixels=true};
+      face.CacheMode=contentCache;
       UpdateFilm();double w=ActualWidth,h=ActualHeight;foreach(var layer in new[]{face,lightingFace}){layer.Width=w;layer.Height=h;layer.Measure(new Size(w,h));layer.Arrange(new Rect(0,0,w,h));}
       var mesh=new MeshGeometry3D{Positions=new Point3DCollection{new Point3D(-w/2,h/2,0),new Point3D(-w/2,-h/2,0),new Point3D(w/2,-h/2,0),new Point3D(w/2,h/2,0)},TextureCoordinates=new PointCollection{new Point(0,0),new Point(0,1),new Point(1,1),new Point(1,0)},TriangleIndices=new Int32Collection{0,1,2,0,2,3}};
       card.Geometry=mesh;lighting.Geometry=mesh;IsPresenting=IsHeld=true;
@@ -157,12 +162,12 @@ namespace RingTimer {
       var window=menu.PixelBounds;var anchor=launcher.PixelBounds;double dpi=Native.ScaleFor(menu.Handle);
       var rect=new Rect((anchor.Left-window.Left)/dpi,(anchor.Top-window.Top)/dpi,anchor.Width/dpi,anchor.Height/dpi);
       launcherRect=rect;
+      UpdateLauncherBacking(rect);
       var visual=launcher.Content as Visual;if(visual==null)return;
       var brush=new VisualBrush(visual){Stretch=Stretch.Fill};RenderOptions.SetCachingHint(brush,CachingHint.Cache);
       var copy=new System.Windows.Shapes.Rectangle{Width=rect.Width,Height=rect.Height,Fill=brush,IsHitTestVisible=false};
       launcherCopy=copy;
       Canvas.SetLeft(copy,rect.Left);Canvas.SetTop(copy,rect.Top);launcherLayer=new Canvas{IsHitTestVisible=false};launcherLayer.Children.Add(copy);face.Children.Add(launcherLayer);
-      cardBase.Clip=new CombinedGeometry(GeometryCombineMode.Exclude,new RectangleGeometry(new Rect(0,0,width,height)),new EllipseGeometry(rect));
       // Keep the layered HWND and its compositor surface alive. Toggling the
       // window opacity through zero tears down/recreates its visible surface.
       floatingLauncher=launcher;launcherHitTest=launcher.IsHitTestVisible;launcher.SuppressForProjection(true);launcher.IsHitTestVisible=false;
@@ -174,7 +179,8 @@ namespace RingTimer {
       if(floatingLauncher==null)return false;var window=menu.PixelBounds;var anchor=floatingLauncher.PixelBounds;double dpi=Native.ScaleFor(menu.Handle);
       var rect=new Rect((anchor.Left-window.Left)/dpi,(anchor.Top-window.Top)/dpi,anchor.Width/dpi,anchor.Height/dpi);if(rect==launcherRect)return false;
       launcherRect=rect;launcherCopy.Width=rect.Width;launcherCopy.Height=rect.Height;Canvas.SetLeft(launcherCopy,rect.Left);Canvas.SetTop(launcherCopy,rect.Top);
-      cardBase.Clip=new CombinedGeometry(GeometryCombineMode.Exclude,new RectangleGeometry(new Rect(0,0,ActualWidth,ActualHeight)),new EllipseGeometry(rect));return true;
+      UpdateLauncherBacking(rect);
+      return true;
     }
     void RestoreLauncher(){
       if(launcherLayer!=null){face.Children.Remove(launcherLayer);launcherLayer=null;}launcherCopy=null;cardBase.Clip=null;launcherRect=Rect.Empty;
@@ -215,7 +221,7 @@ namespace RingTimer {
       try{Unsubscribe();handoffFrames=0;IsHeld=false;if(IsMouseCaptured)ReleaseMouseCapture();if(!IsPresenting)return;
         card.Visual=null;lighting.Visual=null;Children.Remove(viewport);Children.Add(face);Children.Add(lightingFace);face.Width=face.Height=lightingFace.Width=lightingFace.Height=Double.NaN;
         RestoreLauncher();
-        IsPresenting=false;Pitch=Yaw=lightAmount=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);face.CacheMode=null;UpdateLayout();UpdateFilm();menu.RestoreCardContour();
+        IsPresenting=false;Pitch=Yaw=lightAmount=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);RefreshContentCache();UpdateLayout();UpdateFilm();menu.RestoreCardContour();
         // A return triggered by deactivation must not steal focus back from the
         // window the user just selected. The existing logical focus is retained.
         var focused=savedFocus as UIElement;if(menu.IsActive&&menu.IsVisible&&focused!=null&&focused.IsVisible&&focused.IsEnabled)Keyboard.Focus(savedFocus);savedFocus=null;

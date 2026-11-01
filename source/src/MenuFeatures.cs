@@ -51,7 +51,8 @@ namespace RingTimer {
     readonly Dictionary<string,TextBlock> summaries=new Dictionary<string,TextBlock>();StackPanel home;IMenuFeature active;readonly AppearanceSettings appearance;AppearancePanel settingsView;SoundSettingsPanel soundView;LanguageSettingsPanel languageView;SettingsOverview settingsOverview;string settingsPage;
     readonly Border surface,navIsland;readonly TranslateTransform reveal=new TranslateTransform(),pageShift=new TranslateTransform();
     readonly Button close;readonly StackPanel pageStack;
-    internal Bubble Launcher{get;set;}
+    Bubble launcher;
+    internal Bubble Launcher{get{return launcher;}set{if(launcher!=null)launcher.SetDocked(false);launcher=value;if(launcher!=null)launcher.SetDocked(IsVisible);}}
     internal SilverCardPresenter CardPresenter{get;private set;}
     internal Border CardSurface{get{return surface;}}
     internal bool IsDurationEditing{get{var timer=active as TimerFeature;return timer!=null&&timer.Panel.IsEditing;}}
@@ -65,7 +66,8 @@ namespace RingTimer {
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition):this(features,onClose,restorePosition,new AppearanceSettings(null)){}
     public MenuWindow(FeatureRegistry features,Action onClose,Action restorePosition,AppearanceSettings preferences){
       appearance=preferences;registry=features;closed=onClose;restore=restorePosition;Title="小菜单";Width=Theme.MenuWidth;SizeToContent=SizeToContent.Manual;Above=true;AnimationsEnabled=true;
-      surface=new Border{Background=Theme.GlassFill,BorderBrush=Theme.GlassRim(),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(Theme.MenuRadius),Padding=new Thickness(Theme.MenuInset),Margin=new Thickness(8),VerticalAlignment=VerticalAlignment.Bottom,RenderTransform=reveal};CardPresenter=new SilverCardPresenter(this,surface);Content=CardPresenter;
+      surface=new Border{Background=Theme.GlassFill,BorderBrush=Brushes.Transparent,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(Theme.MenuRadius),Padding=new Thickness(Theme.MenuInset),Margin=new Thickness(8),VerticalAlignment=VerticalAlignment.Bottom,RenderTransform=reveal};CardPresenter=new SilverCardPresenter(this,surface);Content=CardPresenter;
+      IsVisibleChanged+=(s,e)=>{if(Launcher!=null)Launcher.SetDocked(IsVisible);};Closed+=(s,e)=>{if(Launcher!=null)Launcher.SetDocked(false);};
       // The header hit targets extend 8 DIP into the card padding. Give their
       // parent that actual width so clipping keeps the entire 40 DIP buttons.
       // Body margins restore its original content width; vertical clipping still
