@@ -1,0 +1,70 @@
+﻿using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Documents;
+using System.Windows.Markup;
+using System.Windows.Media;
+using ShapePath=System.Windows.Shapes.Path;
+namespace RingTimer {
+ sealed class TimerPanel:UserControl {
+  readonly TimerEngine engine;readonly Action changed;readonly Grid root,page,actions;readonly TextBlock phase,readout,round,next,workValue,restValue,error;readonly CycleRing ring;readonly Button work,rest,main,stop;readonly TextBox count;readonly ColumnDefinition stopColumn;
+  Border editor,editorShade;public bool IsEditing{get{return editor!=null;}}public void CancelEditor(){if(editor!=null)CloseEditor(editorShade);}DurationWheel[] wheels;string editing;bool updating;string lastPhase,lastStatus;
+  public event Action ContentChanged;
+  public FrameworkElement Surface{get{return root;}}
+  internal enum TimerPhase{Idle,Armed,Running,Paused,Finished}
+  internal TimerPhase Phase{get{return engine.State.Status=="running"?TimerPhase.Running:engine.State.Status=="paused"?TimerPhase.Paused:engine.State.Status=="finished"?TimerPhase.Finished:TimerPhase.Armed;}}
+  public TimerPanel(TimerEngine timer,Action save){engine=timer;changed=save;Height=406;FontFamily=Theme.Font;root=new Grid();Content=root;page=new Grid();root.Children.Add(page);var stack=new StackPanel();page.Children.Add(stack);
+   var zone=new StackPanel{Height=226,Tag="wave"};stack.Children.Add(zone);
+   var circle=new Grid{Width=200,Height=200};zone.Children.Add(circle);ring=new CycleRing{Width=200,Height=200};circle.Children.Add(ring);
+   var center=new StackPanel{VerticalAlignment=VerticalAlignment.Center};circle.Children.Add(center);
+   phase=Theme.Text("工作",13,Theme.Muted);phase.Height=22;phase.TextAlignment=TextAlignment.Center;center.Children.Add(phase);
+   readout=Theme.Text("",43,Theme.Foreground);readout.FontFamily=Theme.NumberFont;readout.TextAlignment=TextAlignment.Center;Typography.SetNumeralAlignment(readout,FontNumeralAlignment.Tabular);AutomationProperties.SetName(readout,"剩余时间");center.Children.Add(readout);
+   round=Theme.Text("",11,Theme.Muted);round.Margin=new Thickness(0,5,0,0);round.TextAlignment=TextAlignment.Center;center.Children.Add(round);
+   next=Theme.Text("",11,Theme.Muted);next.Height=22;next.Margin=new Thickness(0,3,0,0);next.TextAlignment=TextAlignment.Center;zone.Children.Add(next);
+   var durations=new Grid{Height=52,Margin=new Thickness(0,4,0,12),Tag="wave"};durations.ColumnDefinitions.Add(new ColumnDefinition());durations.ColumnDefinitions.Add(new ColumnDefinition());stack.Children.Add(durations);
+   work=DurationButton("工作",Theme.Done,out workValue);work.Margin=new Thickness(0,0,4,0);work.Click+=(s,e)=>OpenEditor("work");durations.Children.Add(work);
+   rest=DurationButton("休息",Theme.Focus,out restValue);rest.Margin=new Thickness(4,0,0,0);rest.Click+=(s,e)=>OpenEditor("rest");Grid.SetColumn(rest,1);durations.Children.Add(rest);
+   var group=new Grid{Height=32,Margin=new Thickness(0,0,0,14),Tag="wave"};stack.Children.Add(group);var label=Theme.Text("连续执行",12,Theme.Muted);label.VerticalAlignment=VerticalAlignment.Center;group.Children.Add(label);
+   var entry=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};group.Children.Add(entry);
+   count=new TextBox{Text=engine.State.Groups.ToString(),Width=46,Height=30,FontFamily=Theme.NumberFont,FontSize=16,Foreground=Theme.Foreground,Background=Theme.GlassControl,BorderBrush=Theme.Rim,BorderThickness=new Thickness(1),Padding=new Thickness(6,0,6,0),CaretBrush=Theme.Foreground,TextAlignment=TextAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center,FocusVisualStyle=Theme.FocusRing,MaxLength=2};AutomationProperties.SetName(count,"连续执行组数，1 至 99 组");count.Template=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='TextBox'><Border x:Name='frame' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}' CornerRadius='10' Padding='{TemplateBinding Padding}'><ScrollViewer x:Name='PART_ContentHost' VerticalAlignment='Center' HorizontalScrollBarVisibility='Hidden' VerticalScrollBarVisibility='Hidden'/></Border><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocusWithin' Value='True'><Setter TargetName='frame' Property='BorderBrush' Value='{DynamicResource CountFocus}'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='frame' Property='Opacity' Value='.45'/></Trigger></ControlTemplate.Triggers></ControlTemplate>");count.Resources["CountFocus"]=Theme.Focus;entry.Children.Add(count);
+   var after=Theme.Text("组后等待",12,Theme.Muted);after.Margin=new Thickness(8,0,0,0);after.VerticalAlignment=VerticalAlignment.Center;entry.Children.Add(after);
+   count.PreviewTextInput+=(s,e)=>{int n;e.Handled=!Int32.TryParse(e.Text,out n);};count.TextChanged+=(s,e)=>{if(updating)return;int n;if(Int32.TryParse(count.Text,out n)&&n>=1&&n<=99&&!Active){engine.ConfigureCycle(engine.State.WorkSeconds,engine.State.RestSeconds,n);changed();PaintState();}};count.LostKeyboardFocus+=(s,e)=>NormalizeCount();
+   count.PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Up||e.Key==Key.Down){int n;Int32.TryParse(count.Text,out n);count.Text=Math.Max(1,Math.Min(99,n+(e.Key==Key.Up?1:-1))).ToString();e.Handled=true;}};
+   actions=new Grid{Height=40,Tag="wave"};actions.ColumnDefinitions.Add(new ColumnDefinition());stopColumn=new ColumnDefinition{Width=new GridLength(0)};actions.ColumnDefinitions.Add(stopColumn);stack.Children.Add(actions);
+   main=Theme.Button("开始工作",true);main.Height=40;main.Style=Theme.RoundedButtonStyle(true,12);main.Click+=(s,e)=>DoPrimary();actions.Children.Add(main);
+   stop=Theme.Button("",false);stop.Height=40;stop.Style=Theme.RoundedButtonStyle(false,12);L.Bind(stop,FrameworkElement.ToolTipProperty,"重置计时器");L.Bind(stop,AutomationProperties.NameProperty,"重置计时器");stop.Content=new ShapePath{Data=Geometry.Parse("M 3,6 A 6,6 0 1 1 2,11 M 3,2 L 3,6 L 7,6"),Stroke=Theme.Foreground,StrokeThickness=1.5,Width=16,Height=16,Stretch=Stretch.Uniform,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round};stop.Click+=(s,e)=>{engine.StopCycle();changed();PaintState();};Grid.SetColumn(stop,1);actions.Children.Add(stop);
+   error=Theme.Text("",11,Theme.Error);error.Margin=new Thickness(0,6,0,0);stack.Children.Add(error);
+   Loaded+=(s,e)=>PaintState();PaintState();
+  }
+  bool Active{get{return engine.State.Status=="running"||engine.State.Status=="paused";}}
+  static Button DurationButton(string name,Brush ink,out TextBlock value){var b=Theme.Button("",false);b.Height=52;b.Padding=new Thickness(12,5,12,5);b.Style=Theme.RoundedButtonStyle(false,12);b.HorizontalContentAlignment=HorizontalAlignment.Stretch;var row=new Grid();var text=new StackPanel();row.Children.Add(text);var label=Theme.Text("● "+name,11,ink);text.Children.Add(label);value=Theme.Text("",18,Theme.Foreground);text.Children.Add(value);var arrow=new ShapePath{Data=Geometry.Parse("M 1,1 L 5,5 L 9,1"),Stroke=Theme.Muted,StrokeThickness=1.5,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round,StrokeLineJoin=PenLineJoin.Round,Width=10,Height=6,Stretch=Stretch.Uniform,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,2,0),IsHitTestVisible=false};row.Children.Add(arrow);b.Content=row;AutomationProperties.SetName(b,L.T(name=="工作"?"工作时长":"休息时长"));return b;}
+  void NormalizeCount(){int n;if(!Int32.TryParse(count.Text,out n)||n<1||n>99){updating=true;count.Text=engine.State.Groups.ToString();updating=false;}}
+  public int Duration(){return engine.State.WorkSeconds;}
+  public void SetDuration(int seconds){if(Active)return;engine.ConfigureCycle(Math.Max(1,Math.Min(86400,seconds)),engine.State.RestSeconds,engine.State.Groups);PaintState();}
+  public void DoPrimary(){NormalizeCount();if(engine.State.Status=="running")engine.Pause();else if(engine.State.Status=="paused")engine.Resume();else engine.StartCycle(engine.State.WorkSeconds,engine.State.RestSeconds,engine.State.Groups);changed();PaintState();}
+  public void ShowError(string message){error.Text=message;if(ContentChanged!=null)ContentChanged();}
+  public void PaintState(){if(main==null)return;var state=engine.State;bool active=Active,finished=state.Status=="finished";string kind=active?state.Phase:"work";phase.Text=L.T(state.Status=="paused"?"已暂停":finished?"执行完成":kind=="work"?"工作":kind=="rest"?"休息":"计时");double remaining=finished?0:active?engine.Remaining:state.WorkSeconds;readout.Text=TimerEngine.Format(remaining);readout.FontSize=remaining>=3600?31:43;round.Text=active&&!state.Cycle?L.T("单次计时"):(L.Language=="en"?"Set ":"第 ")+(active||finished?state.GroupIndex:1)+" / "+state.Groups+(L.Language=="en"?"":" 组");
+   next.Text=finished?(L.Language=="en"?"Ready when you are":"已停下，等待再次开始"):active&&!state.Cycle?(L.Language=="en"?"Waits when complete":"结束后等待"):kind=="rest"?(state.GroupIndex<state.Groups?(L.Language=="en"?"Next · Work ":"接下来 · 工作 ")+StatsPanel.Duration(state.WorkSeconds):(L.Language=="en"?"Waits after this set":"本组结束后等待")):(L.Language=="en"?"Next · Rest ":"接下来 · 休息 ")+StatsPanel.Duration(state.RestSeconds);
+   ring.Ink=kind=="rest"?Theme.Focus:Theme.Done;double progress=finished?0:active?engine.Remaining/state.Total:1;double from=ring.Progress;ring.BeginAnimation(CycleRing.ProgressProperty,null);ring.Progress=progress;if(IsVisible&&SystemParameters.ClientAreaAnimation&&lastPhase==kind)ring.BeginAnimation(CycleRing.ProgressProperty,MicroMotion.Ease(from,progress,220));ring.InvalidateVisual();
+   workValue.Text=StatsPanel.Duration(state.WorkSeconds);restValue.Text=StatsPanel.Duration(state.RestSeconds);work.IsEnabled=rest.IsEnabled=count.IsEnabled=!active;stop.Visibility=active?Visibility.Visible:Visibility.Collapsed;stopColumn.Width=new GridLength(active?40:0);main.Margin=new Thickness(0,0,active?8:0,0);
+   string action=state.Status=="running"?"暂停":state.Status=="paused"?"继续":finished?"再次开始":"开始工作";if(AutomationProperties.GetName(main)!=L.T(action)){main.Content=Theme.ActionLabel(action,state.Status=="running");AutomationProperties.SetName(main,L.T(action));}
+   if(lastPhase!=kind||lastStatus!=state.Status){MicroMotion.TextIn(readout);MicroMotion.TextIn(phase);}lastPhase=kind;lastStatus=state.Status;
+  }
+  public void OpenEditor(string kind){if(Active||editor!=null)return;editing=kind;page.IsEnabled=false;var host=Window.GetWindow(this) as MenuWindow;bool above=host==null||host.Above;var shade=new Border{Background=Theme.Brush("#66000000"),Margin=new Thickness(0)};editorShade=shade;root.Children.Add(shade);
+   var stack=new StackPanel();editor=new Border{Background=Theme.Background,BorderBrush=Theme.Rim,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(20),Padding=new Thickness(16),VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0),Child=stack};root.Children.Add(editor);
+   KeyboardNavigation.SetTabNavigation(editor,KeyboardNavigationMode.Cycle);
+   var header=new Grid{Height=34,Margin=new Thickness(0,0,0,8)};stack.Children.Add(header);header.Children.Add(Theme.Text(kind=="work"?"工作时长":"休息时长",17,Theme.Foreground));var close=Theme.Button("×",false);close.Width=34;close.Height=30;close.HorizontalAlignment=HorizontalAlignment.Right;close.Click+=(s,e)=>CloseEditor(shade);header.Children.Add(close);
+   var units=new UniformGrid{Columns=3,Height=22};foreach(var unit in new[]{"时","分","秒"}){var text=Theme.Text(unit,11,Theme.Muted);text.TextAlignment=TextAlignment.Center;units.Children.Add(text);}stack.Children.Add(units);
+   var pick=new Grid{Height=140};pick.Children.Add(new Border{Height=32,Background=Theme.GlassControl,CornerRadius=new CornerRadius(7)});var columns=new UniformGrid{Columns=3};pick.Children.Add(columns);stack.Children.Add(pick);wheels=new DurationWheel[3];for(int i=0;i<3;i++){wheels[i]=new DurationWheel(i==0?24:59,new[]{"小时","分钟","秒数"}[i]){Height=140};columns.Children.Add(wheels[i]);}
+   Action<int> set=n=>{wheels[0].SetValue(n/3600,false);wheels[1].SetValue(n/60%60,false);wheels[2].SetValue(n%60,false);};set(kind=="work"?engine.State.WorkSeconds:engine.State.RestSeconds);
+   Action constrain=()=>{bool full=wheels[0].Value==24;if(full){wheels[1].SetValue(0,false);wheels[2].SetValue(0,false);}wheels[1].IsEnabled=wheels[2].IsEnabled=!full;};wheels[0].ValueChanged+=constrain;constrain();
+   var presets=new UniformGrid{Columns=3,Height=30,Margin=new Thickness(0,12,0,14)};stack.Children.Add(presets);foreach(int value in kind=="work"?new[]{15,25,45}:new[]{3,5,10}){int n=value;var b=Theme.Button(n+" 分钟",false);b.Height=30;b.FontSize=12;b.Margin=new Thickness(3,0,3,0);b.Click+=(s,e)=>set(n*60);presets.Children.Add(b);}
+   var apply=Theme.Button("确定",true);apply.Height=40;stack.Children.Add(apply);Action commit=()=>{int n=wheels[0].Value*3600+wheels[1].Value*60+wheels[2].Value;if(n<1||n>86400){AutomationProperties.SetHelpText(apply,"请选择 1 秒至 24 小时");return;}engine.ConfigureCycle(editing=="work"?n:engine.State.WorkSeconds,editing=="rest"?n:engine.State.RestSeconds,engine.State.Groups);changed();CloseEditor(shade);PaintState();};apply.Click+=(s,e)=>commit();editor.PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape){CloseEditor(shade);e.Handled=true;}else if(e.Key==Key.Enter){commit();e.Handled=true;}};wheels[1].Focus();if(ContentChanged!=null)ContentChanged();
+  }
+  void CloseEditor(Border shade){root.Children.Remove(editor);root.Children.Remove(shade);editor=null;editorShade=null;page.IsEnabled=true;if(ContentChanged!=null)ContentChanged();(editing=="work"?work:rest).Focus();}
+ }
+}

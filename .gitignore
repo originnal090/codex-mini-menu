@@ -1,0 +1,8 @@
+source/bin/
+source/artifacts/
+dist/
+releases/
+*.tmp
+*.log
+backup*/
+timer-data/

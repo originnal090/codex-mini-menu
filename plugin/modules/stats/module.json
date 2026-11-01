@@ -1,0 +1,8 @@
+{
+  "id": "stats",
+  "name": "统计",
+  "version": "1.0.0",
+  "enabled": true,
+  "provider": "builtin",
+  "description": "专注日历、总量和分段"
+}

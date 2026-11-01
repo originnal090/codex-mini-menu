@@ -1,0 +1,8 @@
+{
+  "id": "timer",
+  "name": "计时器",
+  "version": "2.1.0",
+  "enabled": true,
+  "provider": "builtin",
+  "description": "自定义倒计时、暂停继续、提示音与到时提醒"
+}
