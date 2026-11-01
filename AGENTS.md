@@ -7,3 +7,4 @@
 - Launcher material must remain visually continuous with the open glass card through rest, tilt, return and dragging.
 - The outer border uses an angular (conic) color gradient and the lower diffuse light has a visibly changing breath cycle. Respect application and system animation preferences and stop animation while hidden.
 - Run the complete data and desktop UI suite before packaging; verify installed and plugin-cache binary hashes.
+- Launcher input changes require source/scripts/test-launcher-input.ps1 on the interactive desktop: real mouse presses, dragging, click-to-close, reopen and post-tilt input. Calling BeginDrag directly cannot establish native hit-test correctness.

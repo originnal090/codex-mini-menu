@@ -68,6 +68,7 @@ namespace RingTimer {
       appearance=preferences;registry=features;closed=onClose;restore=restorePosition;Title="小菜单";Width=Theme.MenuWidth;SizeToContent=SizeToContent.Manual;Above=true;AnimationsEnabled=true;
       surface=new Border{Background=Theme.GlassFill,BorderBrush=Brushes.Transparent,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(Theme.MenuRadius),Padding=new Thickness(Theme.MenuInset),Margin=new Thickness(8),VerticalAlignment=VerticalAlignment.Bottom,RenderTransform=reveal};CardPresenter=new SilverCardPresenter(this,surface);Content=CardPresenter;
       IsVisibleChanged+=(s,e)=>{if(Launcher!=null)Launcher.SetDocked(IsVisible);};Closed+=(s,e)=>{if(Launcher!=null)Launcher.SetDocked(false);};
+      SourceInitialized+=(s,e)=>System.Windows.Interop.HwndSource.FromHwnd(Handle).AddHook(LauncherHitTest);
       // The header hit targets extend 8 DIP into the card padding. Give their
       // parent that actual width so clipping keeps the entire 40 DIP buttons.
       // Body margins restore its original content width; vertical clipping still

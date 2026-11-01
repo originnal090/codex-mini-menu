@@ -42,7 +42,7 @@ try {
       }
     }
     if($Action -eq 'TestUI'){
-      foreach($test in @('test-host-selection.ps1','test-structure.ps1','test-settings.ps1','test-islands.ps1','test-work-rest.ps1','test-stats-view.ps1','test-context-view.ps1','test-silver-card.ps1','test-card-refinement.ps1','test-back.ps1','test-duration-float.ps1','test-motion-polish.ps1','test-conic-glass.ps1','test-window.ps1')){
+      foreach($test in @('test-host-selection.ps1','test-structure.ps1','test-settings.ps1','test-islands.ps1','test-work-rest.ps1','test-stats-view.ps1','test-context-view.ps1','test-silver-card.ps1','test-card-refinement.ps1','test-back.ps1','test-duration-float.ps1','test-motion-polish.ps1','test-conic-glass.ps1','test-launcher-input.ps1','test-window.ps1')){
         & (Join-Path $scripts $test)
       }
     }
