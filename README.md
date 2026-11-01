@@ -1,5 +1,9 @@
 # Codex Mini Menu
 
+Work and rest duration islands expand into floating glass editors from their own positions. Backdrop blur increases smoothly from zero and reverses on dismissal. [Interaction details](docs/duration-float.md)
+
+<p align="center"><img src="docs/images/duration-float.gif" width="320" alt="Work and rest duration panels expand with progressive backdrop blur"></p>
+
 **2.14.1:** Align the Back capsule with the launcher and the card corner, including the mirrored layout.
 
 **2.14.0: Refined card motion.** Concentric corner controls, consistent text rendering and a launcher that tilts with the card. Separate reflection rendering and cached content improve animation performance. See [measurements and tradeoffs](docs/card-refinement-2.14.0.md).
@@ -85,6 +89,8 @@ The installer registers the local Codex plugin and creates shortcuts. Upgrading 
 State, appearance, sound preferences and history are stored locally in `%USERPROFILE%\.codex\timer-data`.
 
 ## Build and verify
+
+Open `CodexMiniMenu.code-workspace`, or run `powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action TestUI`. See the [development and release guide](docs/development.md).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1

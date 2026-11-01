@@ -138,7 +138,7 @@ namespace RingTimer {
     void ThemeChanged(){film.InvalidateVisual();brushing.InvalidateVisual();}
     void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new[]{brushing,film}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}}
     internal void Begin(Point at){
-      if(IsPresenting||ActualWidth<=0||ActualHeight<=0)return;
+      if(menu.IsDurationEditing||IsPresenting||ActualWidth<=0||ActualHeight<=0)return;
       savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=0;elapsed=0;lastFrame=null;
       UpdateFilm();double w=ActualWidth,h=ActualHeight;foreach(var layer in new[]{face,lightingFace}){layer.Width=w;layer.Height=h;layer.Measure(new Size(w,h));layer.Arrange(new Rect(0,0,w,h));}
       var mesh=new MeshGeometry3D{Positions=new Point3DCollection{new Point3D(-w/2,h/2,0),new Point3D(-w/2,-h/2,0),new Point3D(w/2,-h/2,0),new Point3D(w/2,h/2,0)},TextureCoordinates=new PointCollection{new Point(0,0),new Point(0,1),new Point(1,1),new Point(1,0)},TriangleIndices=new Int32Collection{0,1,2,0,2,3}};

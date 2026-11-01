@@ -54,7 +54,8 @@ namespace RingTimer {
     internal Bubble Launcher{get;set;}
     internal SilverCardPresenter CardPresenter{get;private set;}
     internal Border CardSurface{get{return surface;}}
-    internal bool CanTiltCard{get{return !IsClosing&&!resizing&&!morphing&&RevealProgress>.99;}}
+    internal bool IsDurationEditing{get{var timer=active as TimerFeature;return timer!=null&&timer.Panel.IsEditing;}}
+    internal bool CanTiltCard{get{return !IsClosing&&!resizing&&!morphing&&RevealProgress>.99&&!IsDurationEditing;}}
     internal void RestoreCardContour(){lastShape=Rect.Empty;UpdateRevealGeometry();}
     internal Func<double> WorkingHeight=null;readonly ScrollViewer pageScroll;
     public bool Disposing;public Action PresentationRequested;bool preparing,resizing;Size presentedSize,presentationSize;int sizeEpoch,visibilityEpoch;double navigationHeight=Double.NaN;

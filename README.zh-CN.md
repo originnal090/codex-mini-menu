@@ -1,5 +1,9 @@
 # Codex 小菜单
 
+工作和休息时长浮岛现在从点击位置展开为毛玻璃编辑面板，背景模糊由 0 平滑增加，关闭时收回原位。[交互说明](docs/duration-float.md)
+
+<p align="center"><img src="docs/images/duration-float.gif" width="320" alt="工作和休息时长浮岛展开为渐进模糊的毛玻璃面板"></p>
+
 **2.14.1：返回按钮位置修正。** 返回胶囊与圆环水平对齐，左侧弧线与卡片圆角同心，上下展开保持一致。
 
 **2.14.0：圆角与倾斜优化。** 右侧控件与卡片圆角同心，文字绘制保持稳定，圆环跟随整张卡片倾斜。通过反光分层与内容缓存改善动画流畅度。[实测与代价](docs/card-refinement-2.14.0.md)
@@ -89,6 +93,8 @@
 计时状态、外观、声音偏好与历史保存在 `%USERPROFILE%\.codex\timer-data`。
 
 ## 构建与验证
+
+打开 `CodexMiniMenu.code-workspace`，或运行 `powershell -NoProfile -ExecutionPolicy Bypass -File ./dev.ps1 -Action TestUI`。[开发与发布说明](docs/development.md)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File source/scripts/build.ps1
