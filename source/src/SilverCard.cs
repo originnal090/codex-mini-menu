@@ -13,24 +13,32 @@ namespace RingTimer {
     public readonly double Pitch,Yaw,Distance,Scale;
     public readonly Matrix3D Matrix;
     public const double FieldOfView=35;
-    public CardProjection(Size size,double pitch,double yaw){
+    public CardProjection(Size size,double pitch,double yaw):this(size,new Rect(new Point(),size),pitch,yaw){}
+    public CardProjection(Size size,Rect activeBounds,double pitch,double yaw){
       Size=size;Pitch=Clamp(pitch);Yaw=Clamp(yaw);
-      Distance=size.Width/(2*Math.Tan(FieldOfView*Math.PI/360));
+      Distance=activeBounds.Width/(2*Math.Tan(FieldOfView*Math.PI/360));
       var rotation=Matrix3D.Identity;
       rotation.Rotate(new Quaternion(new Vector3D(1,0,0),Pitch));
       rotation.Rotate(new Quaternion(new Vector3D(0,1,0),Yaw));
-      // Fit the full rectangular live visual inside the original popup. This
-      // also bounds every rounded contour point and all nested island shadows.
+      // Fit the visible card, independently of its retained native envelope.
       double fit=1;
-      foreach(double x in new[]{-size.Width/2,size.Width/2})foreach(double y in new[]{-size.Height/2,size.Height/2}){
+      foreach(double x in new[]{-activeBounds.Width/2,activeBounds.Width/2})foreach(double y in new[]{-activeBounds.Height/2,activeBounds.Height/2}){
         var p=rotation.Transform(new Point3D(x,y,0));
-        fit=Math.Min(fit,Distance/(Math.Abs(p.X)*Distance/(size.Width/2)+Math.Max(0,p.Z)));
-        fit=Math.Min(fit,Distance/(Math.Abs(p.Y)*Distance/(size.Height/2)+Math.Max(0,p.Z)));
+        fit=Math.Min(fit,Distance/(Math.Abs(p.X)*Distance/(activeBounds.Width/2)+Math.Max(0,p.Z)));
+        fit=Math.Min(fit,Distance/(Math.Abs(p.Y)*Distance/(activeBounds.Height/2)+Math.Max(0,p.Z)));
       }
-      Scale=Math.Min(1,fit);rotation.Scale(new Vector3D(Scale,Scale,Scale));Matrix=rotation;
+      Scale=Math.Min(1,fit);rotation.Scale(new Vector3D(Scale,Scale,Scale));
+      var offset=new Vector3D(activeBounds.Left+activeBounds.Width/2-size.Width/2,size.Height/2-activeBounds.Top-activeBounds.Height/2,0);
+      var matrix=Matrix3D.Identity;matrix.Translate(-offset);matrix.Append(rotation);
+      // Compensate perspective about the envelope's camera center. This makes
+      // a point project exactly like a tightly sized card plus its local offset,
+      // retaining the original tilt geometry without reallocating the window.
+      var center=Matrix3D.Identity;center.M31=-offset.X/Distance;center.M32=-offset.Y/Distance;center.OffsetX=offset.X;center.OffsetY=offset.Y;
+      matrix.Append(center);Matrix=matrix;
     }
     static double Clamp(double angle){return Math.Max(-12,Math.Min(12,angle));}
-    public Point Project(Point point){var p=Matrix.Transform(new Point3D(point.X-Size.Width/2,Size.Height/2-point.Y,0));double perspective=Distance/(Distance-p.Z);return new Point(Size.Width/2+p.X*perspective,Size.Height/2-p.Y*perspective);}
+    public Point Project(Point point){return Project(point,0);}
+    public Point Project(Point point,double elevation){var p=Matrix.Transform(new Point3D(point.X-Size.Width/2,Size.Height/2-point.Y,elevation));double perspective=Distance/(Distance-p.Z);return new Point(Size.Width/2+p.X*perspective,Size.Height/2-p.Y*perspective);}
     public Point[] Outline(Rect rect,double radius){
       var points=new List<Point>();double r=Math.Min(radius,Math.Min(rect.Width,rect.Height)/2);
       var centers=new[]{new Point(rect.Right-r,rect.Top+r),new Point(rect.Right-r,rect.Bottom-r),new Point(rect.Left+r,rect.Bottom-r),new Point(rect.Left+r,rect.Top+r)};
@@ -45,7 +53,8 @@ namespace RingTimer {
     readonly bool drawBase,drawLight;
     public SilverCardFilm():this(true,true){}
     public SilverCardFilm(bool baseMaterial,bool lighting){drawBase=baseMaterial;drawLight=lighting;IsHitTestVisible=false;Focusable=false;}
-    public void SetPose(double x,double y,double amount){pitch=x;yaw=y;lift=amount;InvalidateVisual();}
+    public void SetPose(double x,double y,double amount){double light=Math.Min(1,(Math.Abs(x)+Math.Abs(y))/25);if(pitch==x&&yaw==y&&lift==light)return;pitch=x;yaw=y;lift=light;InvalidateVisual();}
+    internal static double LightPosition(double pitch,double yaw){return .35+yaw*.018-pitch*.004;}
     static Color Silver(byte alpha,byte value){return Color.FromArgb(alpha,value,value,value);}
     protected override void OnRender(DrawingContext dc){
       double w=ActualWidth,h=ActualHeight;if(w<4||h<4)return;
@@ -64,12 +73,12 @@ namespace RingTimer {
       for(double y=3;y<h;y+=3)dc.DrawLine(grain,new Point(1,y),new Point(w-1,y-.65));
       }
       if(drawLight){
-      double center=.36+yaw/38-pitch/70;
+      double center=LightPosition(pitch,yaw);
       var sweep=new LinearGradientBrush{StartPoint=new Point(0,.1),EndPoint=new Point(1,.8)};
       sweep.GradientStops.Add(new GradientStop(Colors.Transparent,center-.30));
-      sweep.GradientStops.Add(new GradientStop(Silver((byte)(7+lift*12),255),center-.13));
-      sweep.GradientStops.Add(new GradientStop(Silver((byte)(14+lift*32),255),center));
-      sweep.GradientStops.Add(new GradientStop(Silver((byte)(5+lift*14),255),center+.045));
+      sweep.GradientStops.Add(new GradientStop(Silver((byte)(7+lift*4),255),center-.13));
+      sweep.GradientStops.Add(new GradientStop(Silver((byte)(24+lift*7),255),center));
+      sweep.GradientStops.Add(new GradientStop(Silver((byte)(6+lift*4),255),center+.045));
       sweep.GradientStops.Add(new GradientStop(Colors.Transparent,center+.22));
       dc.DrawRectangle(sweep,null,bounds);
       }
@@ -89,11 +98,18 @@ namespace RingTimer {
     readonly SilverCardFilm brushing=new SilverCardFilm(true,false),film=new SilverCardFilm(false,true);
     readonly CardAtmosphere atmosphere=new CardAtmosphere();
     readonly BitmapCache contentCache=new BitmapCache{EnableClearType=false,SnapsToDevicePixels=true};
+    // The moving light field has no text or controls. A smaller texture avoids
+    // rasterizing a full-size translucent 3D surface on every pointer frame.
+    // Live content retains its native-resolution cache; the light cache is used
+    // at rest too, so beginning a gesture does not change its rasterization.
+    readonly BitmapCache lightCache=new BitmapCache{RenderAtScale=.5};
+    readonly ThinFoilRelief relief;
+
     readonly Viewport3D viewport=new Viewport3D{IsHitTestVisible=false};
     readonly Viewport2DVisual3D card=new Viewport2DVisual3D();
     readonly Viewport2DVisual3D lighting=new Viewport2DVisual3D();
     readonly PerspectiveCamera camera=new PerspectiveCamera();readonly MatrixTransform3D pose=new MatrixTransform3D();
-    Point origin;double targetPitch,targetYaw,returnPitch,returnYaw,elapsed,lightAmount,returnLight;
+    Point origin;double targetPitch,targetYaw,returnPitch,returnYaw,elapsed;
     int handoffFrames;
     TimeSpan? lastFrame;
     IInputElement savedFocus;
@@ -109,19 +125,21 @@ namespace RingTimer {
     public double Yaw{get;private set;}
     public CardProjection Projection{get;private set;}
     internal FrameworkElement ContentVisual{get{return face;}}
-    internal bool IncludesLauncher{get{return floatingLauncher!=null;}}
+    internal bool IncludesLauncher{get{return IsPresenting&&floatingLauncher!=null;}}
     public SilverCardPresenter(MenuWindow owner,Border content){
-      menu=owner;surface=content;ClipToBounds=true;
+      menu=owner;surface=content;ClipToBounds=true;relief=new ThinFoilRelief(surface);
       face.CacheMode=contentCache;
       TextOptions.SetTextFormattingMode(face,TextFormattingMode.Display);TextOptions.SetTextRenderingMode(face,TextRenderingMode.Grayscale);
-      cardBase.Children.Add(surface);cardBase.Children.Add(brushing);face.Children.Add(launcherBacking);face.Children.Add(cardBase);lightingFace.Children.Add(atmosphere);lightingFace.Children.Add(film);Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
+      cardBase.Children.Add(surface);face.Children.Add(launcherBacking);face.Children.Add(cardBase);face.Children.Add(brushing);lightingFace.Children.Add(atmosphere);lightingFace.Children.Add(relief);lightingFace.Children.Add(film);lightingFace.CacheMode=lightCache;Children.Add(face);Children.Add(lightingFace);lightingFace.IsHitTestVisible=false;
       RenderOptions.SetCachingHint(card,CachingHint.Cache);RenderOptions.SetCacheInvalidationThresholdMinimum(card,.5);RenderOptions.SetCacheInvalidationThresholdMaximum(card,2);
+      relief.HorizontalAlignment=HorizontalAlignment.Left;relief.VerticalAlignment=VerticalAlignment.Top;
       brushing.HorizontalAlignment=HorizontalAlignment.Left;brushing.VerticalAlignment=VerticalAlignment.Top;
       film.HorizontalAlignment=HorizontalAlignment.Left;film.VerticalAlignment=VerticalAlignment.Top;
       var material=new DiffuseMaterial(Brushes.White);Viewport2DVisual3D.SetIsVisualHostMaterial(material,true);card.Material=material;
       var reflectionMaterial=new DiffuseMaterial(Brushes.White);Viewport2DVisual3D.SetIsVisualHostMaterial(reflectionMaterial,true);lighting.Material=reflectionMaterial;
       card.Transform=pose;lighting.Transform=pose;camera.LookDirection=new Vector3D(0,0,-1);camera.UpDirection=new Vector3D(0,1,0);camera.FieldOfView=CardProjection.FieldOfView;camera.NearPlaneDistance=1;camera.FarPlaneDistance=10000;viewport.Camera=camera;
       viewport.Children.Add(new ModelVisual3D{Content=new AmbientLight(Colors.White)});viewport.Children.Add(card);viewport.Children.Add(lighting);
+      surface.LayoutUpdated+=(s,e)=>{relief.RefreshSurfaces();};
       surface.SizeChanged+=(s,e)=>{if(!IsPresenting)UpdateFilm();};SizeChanged+=(s,e)=>{if(IsPresenting)Reset();UpdateFilm();};
       PreviewMouseRightButtonDown+=(s,e)=>{if(!menu.CanTiltCard||IsPresenting)return;var p=e.GetPosition(surface);if(p.X<0||p.Y<0||p.X>surface.ActualWidth||p.Y>surface.ActualHeight)return;Begin(e.GetPosition(this));if(IsPresenting&&!CaptureMouse())Reset();e.Handled=true;};
       PreviewMouseMove+=(s,e)=>{if(!IsHeld)return;if(e.RightButton==MouseButtonState.Pressed)Move(e.GetPosition(this));else Release();e.Handled=true;};
@@ -134,8 +152,14 @@ namespace RingTimer {
     }
     void SystemMotionChanged(object sender,System.ComponentModel.PropertyChangedEventArgs e){if(e.PropertyName=="ClientAreaAnimation")RefreshAtmosphere();}
     internal void RefreshAtmosphere(){atmosphere.SetMotion(menu.IsVisible&&menu.AnimationsEnabled&&SystemParameters.ClientAreaAnimation);}
-    internal void RefreshContentCache(){face.CacheMode=menu.IsDurationEditing&&!IsPresenting?null:contentCache;}
+    // Keep the completed duration sheet in the same cached face as the page.
+    // WPF invalidates it when wheels/theme change; moving the window can reuse
+    // it instead of recompositing nested blur and island shadows every frame.
+    internal void RefreshContentCache(){face.CacheMode=contentCache;relief.RefreshSurfaces();}
+    internal void RefreshRelief(){relief.RefreshSurfaces();}
+    internal void SetContentReveal(double opacity,double progress,bool above,double fade){relief.Opacity=opacity;atmosphere.SetReveal(progress,above,fade);}
     internal void UpdateLauncherBacking(Rect rect){
+      PositionLauncherCopy(rect);
       var at=surface.TranslatePoint(new Point(),face);var cardRect=new Rect(at,new Size(surface.ActualWidth,surface.ActualHeight));if(rect==backingRect&&cardRect==backingSurface)return;
       backingRect=rect;backingSurface=cardRect;
       if(rect.IsEmpty){launcherBacking.Data=null;return;}
@@ -143,52 +167,65 @@ namespace RingTimer {
       // beyond the card, so their overlapping interior is painted exactly once.
       var outside=new CombinedGeometry(GeometryCombineMode.Exclude,new EllipseGeometry(rect),new RectangleGeometry(cardRect,Theme.MenuRadius,Theme.MenuRadius));outside.Freeze();launcherBacking.Data=outside;
     }
-    void ThemeChanged(){film.InvalidateVisual();brushing.InvalidateVisual();atmosphere.RefreshTheme();RefreshAtmosphere();}
-    void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new FrameworkElement[]{brushing,film,atmosphere}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}RefreshAtmosphere();}
+    void ThemeChanged(){relief.InvalidateVisual();film.InvalidateVisual();brushing.InvalidateVisual();atmosphere.RefreshTheme();RefreshAtmosphere();}
+    void UpdateFilm(){if(surface.ActualWidth<=0)return;var at=surface.TranslatePoint(new Point(),face);foreach(var layer in new FrameworkElement[]{brushing,film,atmosphere,relief}){layer.Width=surface.ActualWidth;layer.Height=surface.ActualHeight;layer.Margin=new Thickness(at.X,at.Y,0,0);layer.Clip=surface.Clip;}RefreshAtmosphere();}
     internal void Begin(Point at){
-      if(menu.IsDurationEditing||IsPresenting||ActualWidth<=0||ActualHeight<=0)return;
-      savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=lightAmount=0;elapsed=0;handoffFrames=0;lastFrame=null;
+      if(menu.IsDurationEditing||IsPresenting||ActualWidth<=0||ActualHeight<=0||surface.ActualWidth<=0||surface.ActualHeight<=0)return;
+      SetDockedLauncher(true);savedFocus=Keyboard.FocusedElement;origin=at;Pitch=Yaw=targetPitch=targetYaw=0;elapsed=0;handoffFrames=0;lastFrame=null;
       face.CacheMode=contentCache;
       UpdateFilm();double w=ActualWidth,h=ActualHeight;foreach(var layer in new[]{face,lightingFace}){layer.Width=w;layer.Height=h;layer.Measure(new Size(w,h));layer.Arrange(new Rect(0,0,w,h));}
       var mesh=new MeshGeometry3D{Positions=new Point3DCollection{new Point3D(-w/2,h/2,0),new Point3D(-w/2,-h/2,0),new Point3D(w/2,-h/2,0),new Point3D(w/2,h/2,0)},TextureCoordinates=new PointCollection{new Point(0,0),new Point(0,1),new Point(1,1),new Point(1,0)},TriangleIndices=new Int32Collection{0,1,2,0,2,3}};
       card.Geometry=mesh;lighting.Geometry=mesh;IsPresenting=IsHeld=true;
       IncludeLauncher(w,h);
+      lightingFace.CacheMode=lightCache;
+      relief.RefreshSurfaces();
       Children.Remove(face);Children.Remove(lightingFace);card.Visual=face;lighting.Visual=lightingFace;Children.Add(viewport);Cursor=Cursors.SizeAll;
       camera.Position=new Point3D(0,0,w/(2*Math.Tan(CardProjection.FieldOfView*Math.PI/360)));
-      ApplyPose(0);Subscribe();
+      ApplyPose();Subscribe();
+    }
+    internal void SetDockedLauncher(bool visible){
+      var launcher=visible?menu.Launcher:null;
+      if(launcher!=null&&!launcher.IsVisible)launcher=null;
+      if(floatingLauncher==launcher){if(launcher!=null)SyncLauncher();return;}
+      if(IsPresenting)Reset();
+      if(floatingLauncher!=null){
+        floatingLauncher.LocationChanged-=LauncherMoved;floatingLauncher.SizeChanged-=LauncherMoved;floatingLauncher.Closed-=LauncherClosed;
+        floatingLauncher.SetVisualInCard(false);floatingLauncher=null;
+      }
+      if(launcherLayer!=null){face.Children.Remove(launcherLayer);launcherLayer=null;}launcherCopy=null;launcherRect=Rect.Empty;
+      if(launcher==null)return;
+      floatingLauncher=launcher;
+      var brush=new VisualBrush(launcher.ProjectionVisual){Stretch=Stretch.Fill};RenderOptions.SetCachingHint(brush,CachingHint.Cache);
+      launcherCopy=new System.Windows.Shapes.Rectangle{Fill=brush,IsHitTestVisible=false};
+      launcherLayer=new Canvas{IsHitTestVisible=false};launcherLayer.Children.Add(launcherCopy);
+      // The ink sits over the glass fill and under its brushing, color field and
+      // reflection at rest and in perspective. A fully opaque fill cannot erase it.
+      face.Children.Insert(face.Children.IndexOf(brushing),launcherLayer);
+      launcher.LocationChanged+=LauncherMoved;launcher.SizeChanged+=LauncherMoved;launcher.Closed+=LauncherClosed;
+      SyncLauncher();launcher.SetVisualInCard(true);
     }
     void IncludeLauncher(double width,double height){
-      var launcher=menu.Launcher;if(launcher==null||!launcher.IsVisible)return;
-      var window=menu.PixelBounds;var anchor=launcher.PixelBounds;double dpi=Native.ScaleFor(menu.Handle);
-      var rect=new Rect((anchor.Left-window.Left)/dpi,(anchor.Top-window.Top)/dpi,anchor.Width/dpi,anchor.Height/dpi);
-      launcherRect=rect;
-      UpdateLauncherBacking(rect);
-      var visual=launcher.Content as Visual;if(visual==null)return;
-      var brush=new VisualBrush(visual){Stretch=Stretch.Fill};RenderOptions.SetCachingHint(brush,CachingHint.Cache);
-      var copy=new System.Windows.Shapes.Rectangle{Width=rect.Width,Height=rect.Height,Fill=brush,IsHitTestVisible=false};
-      launcherCopy=copy;
-      Canvas.SetLeft(copy,rect.Left);Canvas.SetTop(copy,rect.Top);launcherLayer=new Canvas{IsHitTestVisible=false};launcherLayer.Children.Add(copy);face.Children.Add(launcherLayer);
-      // Keep the layered HWND and its compositor surface alive. Toggling the
-      // window opacity through zero tears down/recreates its visible surface.
-      floatingLauncher=launcher;launcherHitTest=launcher.IsHitTestVisible;launcher.SuppressForProjection(true);launcher.IsHitTestVisible=false;
-      launcher.LocationChanged+=LauncherMoved;launcher.SizeChanged+=LauncherMoved;launcher.Closed+=LauncherClosed;
+      if(floatingLauncher==null)return;
+      // The persistent live visual stays in the same material stack. Only the
+      // native hit surface is suppressed while the whole card is projected.
+      launcherHitTest=floatingLauncher.IsHitTestVisible;floatingLauncher.SuppressForProjection(true);floatingLauncher.IsHitTestVisible=false;
     }
-    void LauncherMoved(object sender,EventArgs e){if(IsPresenting&&!restoring)UpdateContour();}
-    void LauncherClosed(object sender,EventArgs e){Reset();}
+    void LauncherMoved(object sender,EventArgs e){if(restoring)return;if(IsPresenting)UpdateContour();else SyncLauncher();}
+    void LauncherClosed(object sender,EventArgs e){SetDockedLauncher(false);}
     bool SyncLauncher(){
       if(floatingLauncher==null)return false;var window=menu.PixelBounds;var anchor=floatingLauncher.PixelBounds;double dpi=Native.ScaleFor(menu.Handle);
       var rect=new Rect((anchor.Left-window.Left)/dpi,(anchor.Top-window.Top)/dpi,anchor.Width/dpi,anchor.Height/dpi);if(rect==launcherRect)return false;
-      launcherRect=rect;launcherCopy.Width=rect.Width;launcherCopy.Height=rect.Height;Canvas.SetLeft(launcherCopy,rect.Left);Canvas.SetTop(launcherCopy,rect.Top);
-      UpdateLauncherBacking(rect);
-      return true;
+      launcherRect=rect;PositionLauncherCopy(rect);UpdateLauncherBacking(rect);return true;
+    }
+    void PositionLauncherCopy(Rect rect){
+      if(launcherCopy==null||rect.IsEmpty)return;launcherRect=rect;launcherCopy.Width=rect.Width;launcherCopy.Height=rect.Height;Canvas.SetLeft(launcherCopy,rect.Left);Canvas.SetTop(launcherCopy,rect.Top);
     }
     void RestoreLauncher(){
-      if(launcherLayer!=null){face.Children.Remove(launcherLayer);launcherLayer=null;}launcherCopy=null;cardBase.Clip=null;launcherRect=Rect.Empty;
-      if(floatingLauncher!=null){floatingLauncher.LocationChanged-=LauncherMoved;floatingLauncher.SizeChanged-=LauncherMoved;floatingLauncher.Closed-=LauncherClosed;floatingLauncher.SuppressForProjection(false);floatingLauncher.IsHitTestVisible=launcherHitTest;floatingLauncher=null;}
+      if(floatingLauncher!=null){floatingLauncher.SuppressForProjection(false);floatingLauncher.IsHitTestVisible=launcherHitTest;}
     }
-    internal void Move(Point at){if(!IsHeld)return;targetPitch=Math.Max(-12,Math.Min(12,-(at.Y-origin.Y)/Math.Max(1,ActualHeight/2)*12));targetYaw=Math.Max(-12,Math.Min(12,(at.X-origin.X)/Math.Max(1,ActualWidth/2)*12));Subscribe();}
+    internal void Move(Point at){if(!IsHeld)return;targetPitch=Math.Max(-12,Math.Min(12,-(at.Y-origin.Y)/Math.Max(1,(surface.ActualHeight+16)/2)*12));targetYaw=Math.Max(-12,Math.Min(12,(at.X-origin.X)/Math.Max(1,(surface.ActualWidth+16)/2)*12));Subscribe();}
     internal void Release(){
-      if(!IsPresenting||!IsHeld)return;IsHeld=false;returnPitch=Pitch;returnYaw=Yaw;returnLight=lightAmount;elapsed=0;lastFrame=null;
+      if(!IsPresenting||!IsHeld)return;IsHeld=false;returnPitch=Pitch;returnYaw=Yaw;elapsed=0;lastFrame=null;
       if(IsMouseCaptured)ReleaseMouseCapture();
       if(!menu.AnimationsEnabled||!SystemParameters.ClientAreaAnimation){Reset();return;}Subscribe();
     }
@@ -196,12 +233,14 @@ namespace RingTimer {
     void Unsubscribe(){if(!FrameSubscribed)return;CompositionTarget.Rendering-=OnFrame;FrameSubscribed=false;lastFrame=null;}
     void OnFrame(object sender,EventArgs e){var rendering=(RenderingEventArgs)e;if(lastFrame==rendering.RenderingTime)return;double dt=lastFrame.HasValue?Math.Min(.05,(rendering.RenderingTime-lastFrame.Value).TotalSeconds):1.0/60;lastFrame=rendering.RenderingTime;
       if(handoffFrames>0){if(--handoffFrames==0)Reset();return;}
-      if(IsHeld){elapsed+=dt;double follow=1-Math.Exp(-dt*22);Pitch+=(targetPitch-Pitch)*follow;Yaw+=(targetYaw-Yaw)*follow;double attack=Math.Min(1,elapsed/.18);lightAmount=attack*attack*(3-2*attack);ApplyPose(lightAmount);if(Math.Abs(targetPitch-Pitch)<.005&&Math.Abs(targetYaw-Yaw)<.005&&attack>=1){Pitch=targetPitch;Yaw=targetYaw;ApplyPose(lightAmount);Unsubscribe();}}
-      else{elapsed+=dt;double t=Math.Min(1,elapsed/.28),left=Math.Pow(1-t,3);Pitch=returnPitch*left;Yaw=returnYaw*left;lightAmount=returnLight*(1-t*t*(3-2*t));ApplyPose(lightAmount);if(t>=1){if(floatingLauncher!=null)handoffFrames=2;else Reset();}}
+      if(IsHeld){double follow=1-Math.Exp(-dt*22);Pitch+=(targetPitch-Pitch)*follow;Yaw+=(targetYaw-Yaw)*follow;ApplyPose();if(Math.Abs(targetPitch-Pitch)<.005&&Math.Abs(targetYaw-Yaw)<.005){Pitch=targetPitch;Yaw=targetYaw;ApplyPose();Unsubscribe();}}
+      else{elapsed+=dt;double t=Math.Min(1,elapsed/.28),left=Math.Pow(1-t,3);Pitch=returnPitch*left;Yaw=returnYaw*left;ApplyPose();if(t>=1){if(floatingLauncher!=null)handoffFrames=2;else Reset();}}
     }
-    void ApplyPose(double lift){
-      Projection=new CardProjection(new Size(ActualWidth,ActualHeight),Pitch,Yaw);
-      pose.Matrix=Projection.Matrix;film.SetPose(Pitch,Yaw,lift);UpdateContour();
+    void ApplyPose(){
+      var canvas=new Size(ActualWidth,ActualHeight);var at=surface.TranslatePoint(new Point(),face);var active=new Rect(at,surface.RenderSize);active.Inflate(8,8);active.Intersect(new Rect(new Point(),canvas));
+      Projection=new CardProjection(canvas,active,Pitch,Yaw);
+      camera.Position=new Point3D(0,0,Projection.Distance);camera.FieldOfView=Math.Atan(ActualWidth/(2*Projection.Distance))*360/Math.PI;
+      pose.Matrix=Projection.Matrix;relief.SetPose(Pitch,Yaw);film.SetPose(Pitch,Yaw,0);UpdateContour();
     }
     internal void UpdateContour(){
       if(!IsPresenting||Projection==null)return;
@@ -219,9 +258,9 @@ namespace RingTimer {
     internal void Reset(){
       if(restoring)return;restoring=true;
       try{Unsubscribe();handoffFrames=0;IsHeld=false;if(IsMouseCaptured)ReleaseMouseCapture();if(!IsPresenting)return;
-        card.Visual=null;lighting.Visual=null;Children.Remove(viewport);Children.Add(face);Children.Add(lightingFace);face.Width=face.Height=lightingFace.Width=lightingFace.Height=Double.NaN;
+        relief.SetPose(0,0);card.Visual=null;lighting.Visual=null;Children.Remove(viewport);Children.Add(face);Children.Add(lightingFace);face.Width=face.Height=lightingFace.Width=lightingFace.Height=Double.NaN;
         RestoreLauncher();
-        IsPresenting=false;Pitch=Yaw=lightAmount=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);RefreshContentCache();UpdateLayout();UpdateFilm();menu.RestoreCardContour();
+        IsPresenting=false;Pitch=Yaw=0;Projection=null;lastContour=null;Cursor=null;film.SetPose(0,0,0);RefreshContentCache();UpdateLayout();UpdateFilm();menu.RestoreCardContour();
         // A return triggered by deactivation must not steal focus back from the
         // window the user just selected. The existing logical focus is retained.
         var focused=savedFocus as UIElement;if(menu.IsActive&&menu.IsVisible&&focused!=null&&focused.IsVisible&&focused.IsEnabled)Keyboard.Focus(savedFocus);savedFocus=null;

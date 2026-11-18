@@ -13,21 +13,22 @@ using System.Windows.Threading;
 namespace RingTimer {
   // Appearance is stored separately: an invalid preference cannot reset a timer.
   sealed class AppearanceSettings:IDisposable {
-    public sealed class Data {public int Transparency=42;public string Language="zh-CN";public string SoundFile="";}
-    readonly string path;readonly DispatcherTimer save;int transparency;string language="zh-CN",soundFile="";bool dirty;
+    public sealed class Data {public int Transparency=42;public string Language="zh-CN";public string SoundFile="";public bool AlwaysFloating;}
+    readonly string path;readonly DispatcherTimer save;int transparency;string language="zh-CN",soundFile="";bool dirty,alwaysFloating;
     public ReminderAudio Audio{get;private set;}
     public event Action Changed;
     public AppearanceSettings(string file){path=file;transparency=42;
-      try{if(path!=null&&File.Exists(path)&&new FileInfo(path).Length<4096){var data=new JavaScriptSerializer().Deserialize<Data>(File.ReadAllText(path));transparency=Math.Max(0,Math.Min(90,data.Transparency));language=L.Normalize(data.Language);soundFile=data.SoundFile??"";}}
+      try{if(path!=null&&File.Exists(path)&&new FileInfo(path).Length<4096){var data=new JavaScriptSerializer().Deserialize<Data>(File.ReadAllText(path));transparency=Math.Max(0,Math.Min(90,data.Transparency));language=L.Normalize(data.Language);soundFile=data.SoundFile??"";alwaysFloating=data.AlwaysFloating;}}
       catch(Exception e){if(!(e is IOException||e is UnauthorizedAccessException||e is ArgumentException||e is InvalidOperationException||e is NullReferenceException))throw;}
       Audio=new ReminderAudio();save=new DispatcherTimer(DispatcherPriority.Background){Interval=TimeSpan.FromMilliseconds(300)};save.Tick+=(s,e)=>Flush();Theme.SetTransparency(transparency);L.SetLanguage(language);
     }
     public int Transparency{get{return transparency;}set{int next=Math.Max(0,Math.Min(90,value));if(next==transparency)return;transparency=next;Theme.SetTransparency(next);dirty=true;save.Stop();save.Start();if(Changed!=null)Changed();}}
     public string Language{get{return language;}set{string next=L.Normalize(value);if(next==language)return;language=next;L.SetLanguage(next);dirty=true;save.Stop();save.Start();if(Changed!=null)Changed();}}
     public string SoundFile{get{return soundFile;}set{string next=value??"";if(next==soundFile)return;soundFile=next;dirty=true;save.Stop();save.Start();if(Changed!=null)Changed();}}
+    public bool AlwaysFloating{get{return alwaysFloating;}set{if(value==alwaysFloating)return;alwaysFloating=value;dirty=true;save.Stop();save.Start();if(Changed!=null)Changed();}}
     public bool SaveFailed{get;private set;}
     public void Flush(){save.Stop();if(!dirty||path==null)return;
-      try{Directory.CreateDirectory(Path.GetDirectoryName(path));string tmp=path+".tmp";File.WriteAllText(tmp,new JavaScriptSerializer().Serialize(new Data{Transparency=transparency,Language=language,SoundFile=soundFile}));if(File.Exists(path))File.Replace(tmp,path,null);else File.Move(tmp,path);dirty=false;SaveFailed=false;}
+      try{Directory.CreateDirectory(Path.GetDirectoryName(path));string tmp=path+".tmp";File.WriteAllText(tmp,new JavaScriptSerializer().Serialize(new Data{Transparency=transparency,Language=language,SoundFile=soundFile,AlwaysFloating=alwaysFloating}));if(File.Exists(path))File.Replace(tmp,path,null);else File.Move(tmp,path);dirty=false;SaveFailed=false;}
       catch(IOException){SaveFailed=true;}catch(UnauthorizedAccessException){SaveFailed=true;}
     }
     public void Dispose(){Flush();save.Stop();Audio.Dispose();}
@@ -58,8 +59,6 @@ namespace RingTimer {
     public readonly Slider Transparency;readonly TextBlock value,hint;readonly AppearanceSettings settings;
     public AppearancePanel(AppearanceSettings preferences){settings=preferences;
       Loaded+=(s,e)=>{settings.Changed+=UpdateValue;UpdateValue();};Unloaded+=(s,e)=>settings.Changed-=UpdateValue;
-      var intro=Theme.Text("让背景透过玻璃",18,Theme.Foreground);intro.TextWrapping=TextWrapping.Wrap;intro.FontWeight=FontWeights.SemiBold;intro.Margin=new Thickness(0,8,0,8);Children.Add(intro);
-      var description=Theme.Text("小菜单、计时器与悬浮按钮共用此设置。",12,Theme.Muted);description.TextWrapping=TextWrapping.Wrap;description.Margin=new Thickness(0,0,0,0);Children.Add(description);
       var row=new Grid();row.Children.Add(Theme.Text("玻璃透明度",14,Theme.Foreground));value=Theme.Text("",14,Theme.Foreground);value.HorizontalAlignment=HorizontalAlignment.Right;row.Children.Add(value);Children.Add(row);
       Transparency=new Slider{Minimum=0,Maximum=90,Value=settings.Transparency,TickFrequency=1,IsSnapToTickEnabled=true,SmallChange=1,LargeChange=10,Height=44,Margin=new Thickness(0,10,0,0),Foreground=Theme.Foreground,FocusVisualStyle=Theme.FocusRing,IsMoveToPointEnabled=true};L.Bind(Transparency,AutomationProperties.NameProperty,"玻璃透明度，百分比");
       Transparency.Template=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type Slider}'>
@@ -73,7 +72,8 @@ namespace RingTimer {
       var ends=new Grid();ends.Children.Add(Theme.Text("厚实",11,Theme.Muted));var clear=Theme.Text("通透",11,Theme.Muted);clear.HorizontalAlignment=HorizontalAlignment.Right;ends.Children.Add(clear);Children.Add(ends);
       var reset=Theme.Button("恢复默认透明度",false);reset.Height=44;reset.Margin=new Thickness(0,14,0,0);reset.Click+=(s,e)=>Transparency.Value=42;Children.Add(reset);
       hint=Theme.Text("",12,Theme.Muted);hint.MinHeight=40;hint.Margin=new Thickness(0,14,0,0);hint.TextWrapping=TextWrapping.Wrap;Children.Add(hint);
-      Theme.GroupIsland(this,0,2,new Thickness(16)).Margin=new Thickness(0,0,0,14);Theme.GroupIsland(this,1,3,new Thickness(16));
+      Theme.GroupIsland(this,0,3,new Thickness(16));
+      var floating=new FloatingSettingsPanel(settings){Margin=new Thickness(0,8,0,14)};Children.Insert(0,floating);
       Transparency.ValueChanged+=(s,e)=>{settings.Transparency=(int)Math.Round(Transparency.Value);UpdateValue();};UpdateValue();
     }
     void UpdateValue(){value.Text=settings.Transparency+"%";L.Bind(hint,TextBlock.TextProperty,settings.SaveFailed?"当前设置已生效，暂时无法保存。":GlassBackdrop.SystemTransparencyEnabled()?"外观自动跟随 Codex，调整即时生效。":"外观跟随 Codex。系统毛玻璃已关闭，当前使用透明材质。");}

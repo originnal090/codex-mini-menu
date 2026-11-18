@@ -12,7 +12,10 @@ namespace RingTimer {
     readonly Border rim=new Border{BorderThickness=new Thickness(1.4),CornerRadius=new CornerRadius(Theme.MenuRadius-1),Margin=new Thickness(1),IsHitTestVisible=false};
     ImageBrush angular;
     readonly Border field=new Border{CornerRadius=new CornerRadius(Theme.MenuRadius-1),Margin=new Thickness(1),IsHitTestVisible=false};
+    readonly Border openingGlow=new Border{CornerRadius=new CornerRadius(Theme.MenuRadius-1),Margin=new Thickness(1),IsHitTestVisible=false,Opacity=0};
+    readonly RadialGradientBrush openingLight=new RadialGradientBrush();
     readonly RotateTransform rotation=new RotateTransform(45);
+    double revealProgress=1,revealFade=1;bool revealAbove;
     bool moving;
     public CardAtmosphere(){
       IsHitTestVisible=false;Focusable=false;HorizontalAlignment=HorizontalAlignment.Left;VerticalAlignment=VerticalAlignment.Top;
@@ -23,7 +26,8 @@ namespace RingTimer {
       diffusion.GradientStops.Add(new GradientStop(Color.FromArgb(24,255,255,255),.16));
       diffusion.GradientStops.Add(new GradientStop(Color.FromArgb(155,255,255,255),.50));
       diffusion.GradientStops.Add(new GradientStop(Colors.White,1));diffusion.Freeze();field.OpacityMask=diffusion;
-      Children.Add(field);Children.Add(rim);SizeChanged+=(s,e)=>ResizeBorder();RefreshTheme();
+      openingGlow.Background=openingLight;
+      Children.Add(field);Children.Add(openingGlow);Children.Add(rim);SizeChanged+=(s,e)=>ResizeBorder();RefreshTheme();
     }
     void ResizeBorder(){
       double w=ActualWidth,h=ActualHeight;if(w<8||h<8)return;
@@ -44,8 +48,27 @@ namespace RingTimer {
       Color accent=((SolidColorBrush)Theme.Focus).Color,surface=((SolidColorBrush)Theme.Background).Color;
       Color ice=Blend(accent,Color.FromRgb(110,205,232),.42),amber=Blend(accent,Color.FromRgb(238,162,107),.74);
       ice=Blend(ice,Theme.IsDark?Colors.White:surface,Theme.IsDark?.10:.12);amber=Blend(amber,Theme.IsDark?Colors.White:surface,Theme.IsDark?.08:.10);
-      field.Opacity=Theme.IsDark?.40:.28;
+      openingLight.GradientStops.Clear();
+      Color glow=Blend(ice,Colors.White,.65);
+      openingLight.GradientStops.Add(new GradientStop(Alpha(glow,190),0));
+      openingLight.GradientStops.Add(new GradientStop(Alpha(glow,100),.32));
+      openingLight.GradientStops.Add(new GradientStop(Alpha(glow,22),.68));
+      openingLight.GradientStops.Add(new GradientStop(Alpha(glow,0),1));
+      SetReveal(revealProgress,revealAbove,revealFade);
       angular=new ImageBrush(AngularTexture(ice,amber,surface)){ViewportUnits=BrushMappingMode.Absolute,Stretch=Stretch.Fill,Transform=rotation};rim.BorderBrush=angular;field.Background=angular;ResizeBorder();
+    }
+    internal void SetReveal(double progress,bool above,double fade){
+      revealProgress=Math.Max(0,Math.Min(1,progress));revealAbove=above;revealFade=fade;
+      double p=revealProgress,ease=p*p*(3-2*p);
+      // A broad pool of light opens from the launcher and diffuses into the
+      // existing color field. Its soft edge never acts as a text reveal mask.
+      var center=new Point(.84-.38*ease,above?.86-.38*ease:.14+.38*ease);
+      openingLight.Center=openingLight.GradientOrigin=center;
+      openingLight.RadiusX=.36+.70*ease;openingLight.RadiusY=.30+.74*ease;
+      double pulse=p>0&&p<1?Math.Pow(Math.Sin(Math.PI*p),2):0;
+      openingGlow.Opacity=(Theme.IsDark?.18:.14)*pulse*fade;
+      field.Opacity=(Theme.IsDark?.40:.28)*(.72+.28*ease);
+      rim.Opacity=.55+.45*ease;
     }
     public void SetMotion(bool enabled){
       if(moving==enabled)return;moving=enabled;

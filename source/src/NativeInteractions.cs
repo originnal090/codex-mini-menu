@@ -39,8 +39,9 @@ namespace RingTimer {
   bool dragging,subscribed,settling;int selected;double grab,target,settleFrom,elapsed;TimeSpan? lastFrame;
   public event Action<int> Changed;public event Action GestureEnded;
   public int Selected{get{return selected;}}public bool IsInteracting{get{return dragging;}}
+  internal void SetActionNames(params string[] names){for(int i=0;i<buttons.Count&&i<names.Length;i++)L.Bind(buttons[i],AutomationProperties.NameProperty,names[i]);}
   internal double ThumbPosition{get{return move.X;}}
-  public SlidingRail(params string[] labels){Height=34;Background=Brushes.Transparent;Focusable=true;FocusVisualStyle=Theme.FocusRing;
+  public SlidingRail(params string[] labels){IslandDepthLayers.SetElevation(this,6);Height=34;Background=Brushes.Transparent;Focusable=true;FocusVisualStyle=Theme.FocusRing;
    Children.Add(Theme.Island(null,new Thickness(0),17));
    thumb=new Border{Background=Theme.Primary,CornerRadius=new CornerRadius(14),Height=28,Margin=new Thickness(3,3,0,3),HorizontalAlignment=HorizontalAlignment.Left,RenderTransform=move,IsHitTestVisible=false};Children.Add(thumb);
    var grid=new System.Windows.Controls.Primitives.UniformGrid{Columns=labels.Length,Margin=new Thickness(3)};Children.Add(grid);
@@ -57,7 +58,10 @@ namespace RingTimer {
    PreviewTouchUp+=(s,e)=>{if(dragging&&e.TouchDevice.Captured==this){MoveGesture(e.GetTouchPoint(this).Position.X);EndGesture(true);e.TouchDevice.Capture(null);e.Handled=true;}};
    LostTouchCapture+=(s,e)=>{if(dragging)EndGesture(false);};
    PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape&&dragging){EndGesture(false);ReleaseMouseCapture();ReleaseAllTouchCaptures();e.Handled=true;return;}int n=selected;if(e.Key==Key.Right)n++;else if(e.Key==Key.Left)n--;else if(e.Key==Key.Home)n=0;else if(e.Key==Key.End)n=buttons.Count-1;else return;Select(n,true);e.Handled=true;};
-   Unloaded+=(s,e)=>{if(dragging)EndGesture(false);StopFrames();settling=false;move.X=target=selected*Step;PaintContrast();};
+   Unloaded+=(s,e)=>{if(dragging)EndGesture(false);StopFrames();settling=false;
+    // Collapsed controls report zero width but can return at the same measured
+    // size without SizeChanged. Settle with the last arranged thumb width.
+    if(!Double.IsNaN(thumb.Width)&&thumb.Width>0){move.X=target=selected*thumb.Width;PaintContrast(thumb.Width);}};
    IsEnabledChanged+=(s,e)=>{if(!IsEnabled&&dragging){EndGesture(false);ReleaseMouseCapture();ReleaseAllTouchCaptures();}};
    AutomationProperties.SetName(this,"统计视图，左右拖动或使用方向键");PaintLabels();
   }
@@ -73,13 +77,85 @@ namespace RingTimer {
   public void Select(int value,bool notify){int next=Math.Max(0,Math.Min(buttons.Count-1,value));bool changed=next!=selected;selected=next;target=selected*Step;settleFrom=move.X;elapsed=0;PaintLabels();
    if(IsVisible&&SystemParameters.ClientAreaAnimation&&Math.Abs(target-move.X)>.01){settling=true;StartFrames();}else{settling=false;move.X=target;StopFrames();PaintContrast();}if(changed&&notify&&Changed!=null)Changed(selected);
   }
-  void PaintContrast(){textClip.Rect=new Rect(move.X,0,Step,28);textClip.RadiusX=textClip.RadiusY=14;}
+  void PaintContrast(){PaintContrast(Step);}
+  void PaintContrast(double width){textClip.Rect=new Rect(move.X,0,width,28);textClip.RadiusX=textClip.RadiusY=14;}
   void PaintLabels(){PaintContrast();for(int i=0;i<buttons.Count;i++){buttons[i].Foreground=Theme.Muted;AutomationProperties.SetItemStatus(buttons[i],i==selected?L.T("已选择"):"");}}
  }
  sealed class CycleRing:FrameworkElement {
   public static readonly DependencyProperty ProgressProperty=DependencyProperty.Register("Progress",typeof(double),typeof(CycleRing),new FrameworkPropertyMetadata(1.0,FrameworkPropertyMetadataOptions.AffectsRender));
   public double Progress{get{return (double)GetValue(ProgressProperty);}set{SetValue(ProgressProperty,value);}}
   public Brush Ink=Theme.Done;
-  protected override void OnRender(DrawingContext dc){base.OnRender(dc);double scale=Math.Min(ActualWidth,ActualHeight)/200.0;dc.PushTransform(new TranslateTransform((ActualWidth-200*scale)/2,(ActualHeight-200*scale)/2));dc.PushTransform(new ScaleTransform(scale,scale));var center=new Point(100,100);dc.PushOpacity(.04);dc.DrawEllipse(Ink,null,center,81,81);dc.Pop();dc.DrawEllipse(null,new Pen(Theme.Track,8),center,88,88);double p=Math.Max(0,Math.Min(1,Progress));var pen=new Pen(Ink,8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};if(p>=.99999)dc.DrawEllipse(null,pen,center,88,88);else if(p>0){double a=p*2*Math.PI;var end=new Point(100+88*Math.Sin(a),100-88*Math.Cos(a));var geometry=new StreamGeometry();using(var g=geometry.Open()){g.BeginFigure(new Point(100,12),false,false);g.ArcTo(end,new Size(88,88),0,p>.5,SweepDirection.Clockwise,true,false);}dc.DrawGeometry(null,pen,geometry);}if(p>0)dc.DrawEllipse(Theme.Foreground,null,new Point(100+88*Math.Sin(p*2*Math.PI),100-88*Math.Cos(p*2*Math.PI)),4,4);dc.Pop();dc.Pop();}
+  static readonly DependencyProperty FillInProperty=DependencyProperty.Register("FillIn",typeof(double),typeof(CycleRing),new FrameworkPropertyMetadata(1.0,FrameworkPropertyMetadataOptions.AffectsRender));
+  internal bool Compact;
+  double workShare=1;
+  bool resting, split;
+  string session;
+  double lastTarget=Double.NaN;
+  bool lastAnimated;
+
+  internal void SetStage(TimerEngine timer,bool animate) {
+    var state=timer.State;
+    bool active=state.Status=="running" || state.Status=="paused";
+    bool newStage=active && session!=state.SessionId;
+    bool rest=active && state.Phase=="rest";
+    bool showSegments=Compact && (state.Cycle || state.Status=="idle");
+    double share=(double)state.WorkSeconds/(state.WorkSeconds+state.RestSeconds);
+    double target=active ? Math.Min(1,timer.Remaining/state.Total) : 0;
+    string stageId=active ? state.SessionId : null;
+    if(session==stageId && resting==rest && split==showSegments && workShare==share &&
+       lastTarget==target && lastAnimated==animate)return;
+    session=stageId; resting=rest; split=showSegments; workShare=share;
+    lastTarget=target; lastAnimated=animate;
+    Ink=resting ? Theme.Focus : Theme.Done;
+    double from=Progress;
+    BeginAnimation(ProgressProperty,null);
+    Progress=target;
+    if(active && animate && !newStage && from!=target)
+      BeginAnimation(ProgressProperty,MicroMotion.Ease(from,target,180));
+    if(newStage || !active || !animate) {
+      BeginAnimation(FillInProperty,null);
+      if(newStage && animate) BeginAnimation(FillInProperty,MicroMotion.Ease(0,1,480));
+    }
+    InvalidateVisual();
+  }
+  static void DrawArc(DrawingContext dc,Pen pen,double start,double span) {
+    if(span<=0)return;
+    var center=new Point(100,100);
+    if(span>=.99999){dc.DrawEllipse(null,pen,center,88,88);return;}
+    var geometry=new StreamGeometry();
+    using(var path=geometry.Open()) {
+      path.BeginFigure(OnRing(start),false,false);
+      path.ArcTo(OnRing(start+span),new Size(88,88),0,span>.5,SweepDirection.Clockwise,true,false);
+    }
+    dc.DrawGeometry(null,pen,geometry);
+  }
+  static Point OnRing(double turn) {
+    double angle=turn*2*Math.PI;
+    return new Point(100+88*Math.Sin(angle),100-88*Math.Cos(angle));
+  }
+  protected override void OnRender(DrawingContext dc) {
+    base.OnRender(dc);
+    double scale=Math.Min(ActualWidth,ActualHeight)/200;
+    dc.PushTransform(new TranslateTransform((ActualWidth-200*scale)/2,(ActualHeight-200*scale)/2));
+    dc.PushTransform(new ScaleTransform(scale,scale));
+    double width=Compact?14:8;
+    if(!Compact){dc.PushOpacity(.04);dc.DrawEllipse(Ink,null,new Point(100,100),81,81);dc.Pop();}
+    double start=0, span=1;
+    if(split) {
+      double gap=Math.Min(.025,Math.Min(workShare,1-workShare)*.25);
+      dc.PushOpacity(.32);
+      DrawArc(dc,new Pen(Theme.Done,width),0,workShare-gap);
+      DrawArc(dc,new Pen(Theme.Focus,width),workShare,1-workShare-gap);
+      dc.Pop();
+      start=resting?workShare:0;
+      span=(resting?1-workShare:workShare)-gap;
+    } else DrawArc(dc,new Pen(Theme.Track,width),0,1);
+    double amount=span*Math.Max(0,Math.Min(1,Progress))*(double)GetValue(FillInProperty);
+    var ink=new Pen(Ink,width);
+    if(!split)ink.StartLineCap=ink.EndLineCap=PenLineCap.Round;
+    DrawArc(dc,ink,start,amount);
+    if(!Compact && amount>0)dc.DrawEllipse(Theme.Foreground,null,OnRing(start+amount),4,4);
+    dc.Pop();dc.Pop();
+  }
  }
 }

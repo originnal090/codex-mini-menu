@@ -15,6 +15,8 @@
 
 当前支持 Codex 的 `state_5.sqlite` 索引与本地 `sessions` / `archived_sessions` 记录格式。远程聊天没有本地记录、同名或截断标题无法唯一对应、索引不可读时显示 `—`。上下文压缩后等待新的用量记录。读数随 Codex 记录更新，不估算正在生成但尚未记录的 token。
 
+支持索引中的普通 Windows 路径及 `\\?\` 扩展路径；读取前统一规范化路径，再核对其是否位于允许的聊天记录目录内。
+
 不会读取其他软件或上传数据。仅在 `%USERPROFILE%\.codex\timer-data\context-alerts.json` 保存已提醒过的聊天 ID。
 
 ## 开发验证

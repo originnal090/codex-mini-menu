@@ -64,7 +64,7 @@ namespace RingTimer {
         wake.WaitOne(1000);
       }
     }
-    bool AllowedPath(string path){if(String.IsNullOrEmpty(path))return false;string full=Path.GetFullPath(path);return full.StartsWith(Path.Combine(codexRoot,"sessions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)||full.StartsWith(Path.Combine(codexRoot,"archived_sessions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase);}
+    bool AllowedPath(string path){if(String.IsNullOrEmpty(path))return false;string full=ContextLogPath.FullPath(path),root=ContextLogPath.FullPath(codexRoot);return full.StartsWith(Path.Combine(root,"sessions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)||full.StartsWith(Path.Combine(root,"archived_sessions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase);}
     public void Dispose(){lock(gate){stopped=true;}wake.Set();if(worker.Join(100))wake.Dispose();}
   }
 }

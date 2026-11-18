@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -52,7 +52,7 @@ namespace RingTimer {
       <Setter Property='Cursor' Value='Hand'/><Setter Property='BorderThickness' Value='1'/>
       <Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Button}'>
         <Border x:Name='surface' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}' CornerRadius='__RADIUS__'>
-          <Grid><ContentPresenter Margin='{TemplateBinding Padding}' HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center' TextElement.FontFamily='{TemplateBinding FontFamily}' TextElement.FontSize='{TemplateBinding FontSize}' TextElement.FontWeight='{TemplateBinding FontWeight}' TextElement.Foreground='{TemplateBinding Foreground}'/><Border x:Name='depth' IsHitTestVisible='False' Opacity='0' CornerRadius='__RADIUS__'><Border.Background><LinearGradientBrush StartPoint='0,0' EndPoint='0,1'><GradientStop Color='#88000000' Offset='0'/><GradientStop Color='#22000000' Offset='.28'/><GradientStop Color='#00000000' Offset='.6'/></LinearGradientBrush></Border.Background><Border BorderBrush='#22000000' BorderThickness='1.5,2,1.5,0' CornerRadius='__RADIUS__'/></Border></Grid>
+          <Grid><ContentPresenter Margin='{TemplateBinding Padding}' HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center' TextElement.FontFamily='{TemplateBinding FontFamily}' TextElement.FontSize='{TemplateBinding FontSize}' TextElement.FontWeight='{TemplateBinding FontWeight}' TextElement.Foreground='{TemplateBinding Foreground}'/><Border x:Name='depth' IsHitTestVisible='False' Opacity='0' CornerRadius='__RADIUS__' BorderBrush='#26000000' BorderThickness='1'><Border.Effect><DropShadowEffect Color='Black' BlurRadius='8' ShadowDepth='0' Opacity='.18'/></Border.Effect><Border BorderBrush='#10000000' BorderThickness='2' Margin='1' CornerRadius='__RADIUS__'/></Border></Grid>
         </Border>
         <ControlTemplate.Triggers>
           <Trigger Property='IsMouseOver' Value='True'><Setter TargetName='surface' Property='Background' Value='__HOVER__'/></Trigger>
@@ -76,8 +76,8 @@ namespace RingTimer {
     public static Style BareStyle{get{if(bareStyle==null)bareStyle=(Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type Button}'>
       <Setter Property='FocusVisualStyle' Value='{x:Null}'/><Setter Property='Cursor' Value='Hand'/>
       <Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Button}'><ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/></ControlTemplate></Setter.Value></Setter></Style>");return bareStyle;}}
-    public static Button Button(string text,bool primary){var result=new Button{Content=text,Style=primary?PrimaryStyle:ButtonStyle,FocusVisualStyle=FocusRing,HorizontalContentAlignment=HorizontalAlignment.Center,FontFamily=Font,FontSize=14,Foreground=primary?PrimaryText:Foreground,Background=primary?Primary:IslandFill,BorderBrush=primary?Brushes.Transparent:IslandEdge,Padding=new Thickness(0),Height=44,Effect=IslandElevation()};L.Bind(result,ContentControl.ContentProperty,text);MicroMotion.Attach(result);return result;}
-    public static TextBlock Text(string text,double size,Brush color){var result=new TextBlock{FontFamily=Font,FontSize=size,Foreground=color};L.Bind(result,TextBlock.TextProperty,text);return result;}
+    public static Button Button(string text,bool primary){var result=new Button{Content=text,Style=primary?PrimaryStyle:ButtonStyle,FocusVisualStyle=FocusRing,HorizontalContentAlignment=HorizontalAlignment.Center,FontFamily=Font,FontSize=14,Foreground=primary?PrimaryText:Foreground,Background=primary?Primary:IslandFill,BorderBrush=primary?Brushes.Transparent:IslandEdge,Padding=new Thickness(0),Height=44,Effect=IslandElevation()};L.Bind(result,ContentControl.ContentProperty,text);ThemeTypography.Button(result);MicroMotion.Attach(result);return result;}
+    public static TextBlock Text(string text,double size,Brush color){var result=new TextBlock{FontFamily=Font,FontSize=size,Foreground=color};L.Bind(result,TextBlock.TextProperty,text);ThemeTypography.Text(result);return result;}
     // WPF defaults assume a light theme: a dark card would still pop a white tooltip.
     public static void ApplyGlobalResources(Application app){
       if(app==null)return;
@@ -103,7 +103,7 @@ namespace RingTimer {
     protected TimerWindow(){WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.NoResize;AllowsTransparency=true;Background=Brushes.Transparent;ShowInTaskbar=false;Topmost=false;WindowStartupLocation=WindowStartupLocation.Manual;FontFamily=Theme.Font;TextOptions.SetTextFormattingMode(this,TextFormattingMode.Display);TextOptions.SetTextRenderingMode(this,TextRenderingMode.Grayscale);SourceInitialized+=(s,e)=>{var h=new WindowInteropHelper(this).Handle;HwndSource.FromHwnd(h).AddHook(WindowMessage);GlassBackdrop.Enable(h);};}
     int regionWidth,regionHeight;double regionScale;
     protected virtual void UpdateWindowShape(){var r=PixelBounds;double scale=Native.ScaleFor(Handle);if(regionWidth!=r.Width||regionHeight!=r.Height||regionScale!=scale){regionWidth=r.Width;regionHeight=r.Height;regionScale=scale;GlassBackdrop.Shape(Handle,r.Width,r.Height,scale,this is Bubble);}}
-    IntPtr WindowMessage(IntPtr window,int message,IntPtr w,IntPtr l,ref bool handled){if(message==NativeFollower.MoveMessage){NativeFollower.Deliver(window,w,l);handled=true;}else if(message==5||message==0x2E0||message==0x47)UpdateWindowShape();return IntPtr.Zero;}
+    IntPtr WindowMessage(IntPtr window,int message,IntPtr w,IntPtr l,ref bool handled){if(message==NativeFollower.MoveMessage){NativeFollower.Deliver(window,w,l);handled=true;}else if(message==NativeFollower.PlacementCompleteMessage){UpdateWindowShape();handled=true;}else if(message==5||message==0x2E0||(message==0x47&&!NativeFollower.ApplyingPlacement))UpdateWindowShape();return IntPtr.Zero;}
     public Native.RECT PixelBounds {get{Native.RECT r;Native.GetWindowRect(Handle,out r);return r;}}
     public void MovePixels(int x,int y){var current=PixelBounds;if(current.Left==x&&current.Top==y)return;if(Native.SetWindowPos(Handle,IntPtr.Zero,x,y,0,0,0x0015))PositionUpdates++;}
     public void SetBoundsPixels(int x,int y,int width,int height){var current=PixelBounds;if(current.Left==x&&current.Top==y&&current.Width==width&&current.Height==height)return;if(Native.SetWindowPos(Handle,IntPtr.Zero,x,y,width,height,0x0014))PositionUpdates++;}
@@ -117,9 +117,17 @@ namespace RingTimer {
     internal void SetDocked(bool value){docked=value;surface.Background=docked?DockedHitFill:Theme.GlassFill;PaintHover(false);var handle=new WindowInteropHelper(this).Handle;if(handle!=IntPtr.Zero)GlassBackdrop.Enable(handle,!docked);}
     internal void SuppressForProjection(bool suppress){projectionSuppressed=suppress;var handle=new WindowInteropHelper(this).Handle;if(handle==IntPtr.Zero)return;var r=PixelBounds;if(suppress)GlassBackdrop.SuppressShape(handle);else GlassBackdrop.Shape(handle,r.Width,r.Height,Native.ScaleFor(handle),true);}
     protected override void UpdateWindowShape(){if(!projectionSuppressed)base.UpdateWindowShape();}
-    readonly Ellipse ring;readonly ShapePath arc;readonly Border surface;readonly Button button;readonly TextBlock contextText;string timerStatus="";
+    readonly CycleRing ring;readonly Border surface,nativeArt;readonly Button button;readonly TextBlock contextText;string timerStatus="";
+    internal Visual ProjectionVisual{get{return surface;}}
+    // The same live art can be composited under the card's material while the
+    // native button retains alpha-bearing pixels for real pointer hit testing.
+    internal void SetVisualInCard(bool value){nativeArt.Opacity=value?0:1;}
     public bool Dragging {get;private set;}bool moved,pending,renderAttached;int pendingX,pendingY;Native.POINT down;Native.RECT origin;
-    string paintedKey;
+    internal bool DataAnimations=true;
+    readonly MetricEntrance contextEntrance;
+    int percentFrom,percentTarget;
+    string percentThread;
+    bool knownPercent;
     public Action Clicked,Dragged,PositionChanged,DragStarted,DragEnded;
     public Func<Native.RECT?> DragArea;
     public Bubble(){
@@ -129,14 +137,13 @@ namespace RingTimer {
       button=new Button{Style=Theme.BareStyle,Background=Brushes.Transparent,BorderBrush=Brushes.Transparent,BorderThickness=new Thickness(0),Padding=new Thickness(0),ToolTip="打开小菜单 · 拖动换位置",Focusable=true};
       surface=new Border{Width=44,Height=44,CornerRadius=new CornerRadius(22),Background=Theme.GlassFill,BorderBrush=Theme.GlassRim(),BorderThickness=new Thickness(1)};
       var canvas=new Canvas{Width=28,Height=28,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};surface.Child=canvas;
-      ring=new Ellipse{Width=24,Height=24,Stroke=Theme.Running,StrokeThickness=2};Canvas.SetLeft(ring,2);Canvas.SetTop(ring,2);canvas.Children.Add(ring);
-      // Remaining-time arc: the ring is a track while a timer runs, so the floating
-      // button reports progress without opening the panel.
-      arc=new ShapePath{Stroke=Theme.Running,StrokeThickness=2,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round,Visibility=Visibility.Collapsed,IsHitTestVisible=false};
-      canvas.Children.Add(arc);
+      ring=new CycleRing{Width=26,Height=26,Progress=0,Compact=true,IsHitTestVisible=false};
+      Canvas.SetLeft(ring,1);Canvas.SetTop(ring,1);canvas.Children.Add(ring);
       contextText=Theme.Text("—",10,Theme.Muted);contextText.FontFamily=Theme.NumberFont;contextText.FontWeight=FontWeights.SemiBold;
+      contextEntrance=new MetricEntrance(p=>{if(knownPercent)contextText.Text=((int)Math.Round(percentFrom+(percentTarget-percentFrom)*p))+"%";});
+      IsVisibleChanged+=(s,e)=>{if(IsVisible && knownPercent){percentFrom=0;contextEntrance.Start(DataAnimations&&MetricEntrance.Enabled(this),400);}else contextEntrance.Finish();};
       var contextBox=new Viewbox{Width=20,Height=16,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,Child=contextText,IsHitTestVisible=false};Canvas.SetLeft(contextBox,4);Canvas.SetTop(contextBox,6);canvas.Children.Add(contextBox);
-      L.Bind(button,FrameworkElement.ToolTipProperty,"打开小菜单 · 拖动换位置");button.Content=surface;Content=button;
+      L.Bind(button,FrameworkElement.ToolTipProperty,"打开小菜单 · 拖动换位置");nativeArt=new Border{Child=surface};var nativeHit=new Grid{Width=44,Height=44,Background=DockedHitFill};nativeHit.Children.Add(nativeArt);button.Content=nativeHit;Content=button;
       button.MouseEnter+=(s,e)=>PaintHover(true);button.MouseLeave+=(s,e)=>PaintHover(false);
       button.Click+=(s,e)=>{if(!moved&&Clicked!=null)Clicked();};
       button.PreviewMouseLeftButtonDown+=(s,e)=>{Native.POINT p;Native.GetCursorPos(out p);surface.Background=docked?DockedHitFill:Theme.Pressed;BeginDrag(p);};
@@ -158,26 +165,25 @@ namespace RingTimer {
     void DetachRendering(){if(renderAttached){CompositionTarget.Rendering-=OnDragFrame;renderAttached=false;}}
     internal void EndDrag(){if(!Dragging)return;FlushDragFrame();DetachRendering();bool didMove=moved;Dragging=false;moved=false;if(didMove&&Dragged!=null)Dragged();if(DragEnded!=null)DragEnded();PaintHover(button.IsMouseOver);}
     public void PaintState(){}
-    public void SetContext(ContextUsage usage){contextText.Text=usage.Display;contextText.Foreground=usage.Known?ContextFeature.Ink(usage):Theme.Muted;string name=L.T("已用上下文")+" "+usage.Display;AutomationProperties.SetName(contextText,name);AutomationProperties.SetName(button,L.T("打开小菜单")+" · "+name);button.ToolTip=L.T("打开小菜单")+" · "+timerStatus+"\n"+name;}
-    public void SetStatus(string text,string status){SetStatus(text,status,1);}
-    // progress is the remaining fraction (1 = full ring, 0 = empty).
-    public void SetStatus(string text,string status,double progress){
-      if(progress<0)progress=0;if(progress>1)progress=1;
-      int step=(int)Math.Round(progress*720);string key=text+"|"+status+"|"+step;
-      if(paintedKey==key)return;paintedKey=key;
-      timerStatus=text;button.ToolTip=L.T("打开小菜单")+" · "+text;
-      Brush color=status=="finished"?Theme.Done:status=="paused"?Theme.Paused:Theme.Running;
-      bool full=status=="idle"||status=="finished"||progress>=0.999||step==720;
-      ring.Stroke=full?(status=="idle"?Theme.Running:color):Theme.Track;
-      arc.Stroke=color;
-      if(full||progress<=0.002){arc.Visibility=Visibility.Collapsed;}
-      else{arc.Data=ArcGeometry(progress);arc.Visibility=Visibility.Visible;}
+    public void SetContext(ContextUsage usage){if(!usage.Known){knownPercent=false;contextEntrance.Finish();contextText.Text=usage.Display;}
+      else if(!knownPercent || percentThread!=usage.ThreadId || percentTarget!=usage.Percent){
+        bool entering=!knownPercent || percentThread!=usage.ThreadId;
+        percentFrom=entering?0:percentTarget;percentTarget=usage.Percent;percentThread=usage.ThreadId;knownPercent=true;
+        contextEntrance.Start(DataAnimations&&MetricEntrance.Enabled(this),entering?400:180);
+      }
+      contextText.Foreground=usage.Known?ContextFeature.Ink(usage):Theme.Muted;string name=L.T("已用上下文")+" "+usage.Display;AutomationProperties.SetName(contextText,name);AutomationProperties.SetName(button,L.T("打开小菜单")+" · "+name);button.ToolTip=L.T("打开小菜单")+" · "+timerStatus+"\n"+name+"\n"+L.T("拖动圆环调整位置");}
+    internal void SetStage(string summary,TimerEngine timer,bool animations) {
+      DataAnimations=animations;
+      bool active=timer.State.Status=="running" || timer.State.Status=="paused";
+      timerStatus=active?L.T(timer.State.Phase=="rest"?"休息":"工作")+" · "+summary:summary;
+      ring.SetStage(timer,animations && MetricEntrance.Enabled(this));
     }
-    static Geometry ArcGeometry(double fraction){
-      const double center=14,radius=12;double angle=fraction*Math.PI*2;
-      var figure=new PathFigure{StartPoint=new Point(center,center-radius)};
-      figure.Segments.Add(new ArcSegment{Point=new Point(center+radius*Math.Sin(angle),center-radius*Math.Cos(angle)),Size=new Size(radius,radius),IsLargeArc=fraction>0.5,SweepDirection=SweepDirection.Clockwise});
-      var geometry=new PathGeometry();geometry.Figures.Add(figure);geometry.Freeze();return geometry;
+    public void SetStatus(string text,string status){SetStatus(text,status,1);}
+    public void SetStatus(string text,string status,double progress){
+      timerStatus=text;
+      ring.Ink=status=="paused"?Theme.Paused:Theme.Running;
+      ring.Progress=Math.Max(0,Math.Min(1,progress));
+      ring.InvalidateVisual();
     }
   }
 

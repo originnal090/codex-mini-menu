@@ -36,15 +36,36 @@ namespace RingTimer {
   }
   static class ContextSelection {
     public static string Normalize(string title){return Regex.Replace(title??"",@"\s+"," ").Trim();}
+    // The index can retain Markdown emphasis in a generated chat name while
+    // RootWebArea exposes its rendered text. Only paired markers are removed;
+    // literal punctuation and unfinished markup remain part of the title.
+    static string RenderedTitle(string title){return Regex.Replace(title,@"(\*\*|__)(?=\S)(.+?)(?<=\S)\1","$2");}
     public static ContextThread Match(string visibleTitle,IEnumerable<ContextThread> threads){
       string visible=Normalize(visibleTitle);if(visible.Length==0)return null;
       bool truncated=visible.EndsWith("…",StringComparison.Ordinal)||visible.EndsWith("...",StringComparison.Ordinal);
       string prefix=truncated?visible.Substring(0,visible.Length-(visible.EndsWith("…",StringComparison.Ordinal)?1:3)):visible;
       if(truncated&&prefix.Length<12)return null;
       ContextThread match=null;
-      foreach(var item in threads){string title=Normalize(item.Title);if(title!=visible&&!(truncated&&title.StartsWith(prefix,StringComparison.Ordinal)))continue;
+      foreach(var item in threads){string title=Normalize(item.Title),rendered=RenderedTitle(title);
+        if(title!=visible&&rendered!=visible&&!(truncated&&(title.StartsWith(prefix,StringComparison.Ordinal)||rendered.StartsWith(prefix,StringComparison.Ordinal))))continue;
+        // Raw and rendered matches share the same ambiguity check: formatting
+        // differences must never select another conversation's token usage.
         if(match!=null&&match.Id!=item.Id)return null;match=item;
       }return match;
+    }
+  }
+  static class ContextLogPath {
+    // Codex can store Win32 extended paths in its thread index. This executable
+    // uses legacy .NET Framework path handling, so normalize before validation
+    // and file access; both must refer to the same canonical filesystem path.
+    public static string FullPath(string path){
+      if(String.IsNullOrWhiteSpace(path))throw new ArgumentException("Missing context log path.");
+      if(path.StartsWith(@"\\?\UNC\",StringComparison.OrdinalIgnoreCase))path=@"\\"+path.Substring(8);
+      else if(path.StartsWith(@"\\?\",StringComparison.Ordinal)){
+        if(path.Length<7||!((path[4]>='A'&&path[4]<='Z')||(path[4]>='a'&&path[4]<='z'))||path[5]!=':'||path[6]!='\\')throw new ArgumentException("Unsupported context log path.");
+        path=path.Substring(4);
+      }
+      return Path.GetFullPath(path);
     }
   }
   sealed class ContextLogReader {
@@ -52,14 +73,14 @@ namespace RingTimer {
     public ContextUsage Read(ContextThread thread){
       if(thread==null)return ContextUsage.Unknown(null,null);
       try{
-        var file=new FileInfo(thread.Path);
-        if(cached!=null&&path==thread.Path&&length==file.Length&&modified==file.LastWriteTimeUtc){cached.Title=thread.Title;return cached;}
-        var result=ReadTail(thread);path=thread.Path;length=file.Length;modified=file.LastWriteTimeUtc;cached=result;return result;
+        string full=ContextLogPath.FullPath(thread.Path);var file=new FileInfo(full);
+        if(cached!=null&&path==full&&length==file.Length&&modified==file.LastWriteTimeUtc){cached.Title=thread.Title;return cached;}
+        var result=ReadTail(thread,full);path=full;length=file.Length;modified=file.LastWriteTimeUtc;cached=result;return result;
       }catch(IOException){}catch(UnauthorizedAccessException){}catch(ArgumentException){}
       return ContextUsage.Unknown(thread.Id,thread.Title);
     }
-    static ContextUsage ReadTail(ContextThread thread){
-      using(var stream=new FileStream(thread.Path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)){
+    static ContextUsage ReadTail(ContextThread thread,string full){
+      using(var stream=new FileStream(full,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)){
         long end=stream.Length;
         for(int size=65536;size<=8388608;size*=4){
           long start=Math.Max(0,end-size);stream.Position=start;

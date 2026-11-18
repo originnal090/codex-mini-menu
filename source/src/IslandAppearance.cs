@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -21,11 +21,11 @@ namespace RingTimer {
     }
     static Color ReadableSurface(Color fill,Color ink){Color limit=Contrast(Colors.Black,ink)>=Contrast(Colors.White,ink)?Colors.Black:Colors.White;for(int i=0;i<24&&Contrast(fill,ink)<4.5;i++)fill=Mix(fill,limit,.12);return fill;}
     public static DropShadowEffect IslandElevation(){
-      var shadow=new DropShadowEffect{BlurRadius=12,ShadowDepth=3,Direction=270,Opacity=.24,RenderingBias=RenderingBias.Quality};
+      var shadow=new DropShadowEffect{BlurRadius=9,ShadowDepth=2,Direction=270,Opacity=.14,RenderingBias=RenderingBias.Quality};
       BindingOperations.SetBinding(shadow,DropShadowEffect.ColorProperty,new Binding("Color"){Source=IslandShadow});return shadow;
     }
-    public static Border Island(UIElement content,Thickness padding,int radius=IslandRadius){return new Border{Child=content,Padding=padding,CornerRadius=new CornerRadius(radius),Background=IslandFill,BorderBrush=IslandEdge,BorderThickness=new Thickness(1),Effect=IslandElevation()};}
-    public static void Raise(Button button){button.Background=IslandFill;button.BorderBrush=IslandEdge;button.Effect=IslandElevation();button.Style=RoundedButtonStyle(false,IslandRadius);}
+    public static Border Island(UIElement content,Thickness padding,int radius=IslandRadius){var island=new Border{Child=content,Padding=padding,CornerRadius=new CornerRadius(radius),Background=IslandFill,BorderBrush=IslandEdge,BorderThickness=new Thickness(1),Effect=IslandElevation()};IslandDepthLayers.SetElevation(island,16);return island;}
+    public static void Raise(Button button){IslandDepthLayers.SetElevation(button,16);button.Background=IslandFill;button.BorderBrush=IslandEdge;button.Effect=IslandElevation();button.Style=RoundedButtonStyle(false,IslandRadius);}
     public static void StyleScroll(ScrollViewer scroll){
       var style=(Style)System.Windows.Markup.XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ScrollBar'><Setter Property='Width' Value='8'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='ScrollBar'><Grid Background='Transparent'><Track Name='PART_Track' IsDirectionReversed='True' Orientation='Vertical'><Track.DecreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageUpCommand}' Focusable='False'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate><Border Background='{DynamicResource IslandScrollInk}' CornerRadius='3' Margin='2'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageDownCommand}' Focusable='False'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton></Track></Grid></ControlTemplate></Setter.Value></Setter></Style>");
       scroll.Resources["IslandScrollInk"]=Line;scroll.Resources[SystemParameters.VerticalScrollBarWidthKey]=8.0;scroll.Resources[typeof(System.Windows.Controls.Primitives.ScrollBar)]=style;

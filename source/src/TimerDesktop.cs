@@ -89,7 +89,7 @@ namespace RingTimer {
   sealed class MenuApplication:IDisposable {
     readonly TimerEngine engine;readonly TimerFeature timerFeature;readonly StatsStore stats;DateTime statsRetry;readonly FeatureRegistry registry;readonly Bubble bubble;readonly MenuWindow panel;readonly Forms.NotifyIcon tray;readonly Icon icon;
     readonly DispatcherTimer tick;readonly EventWaitHandle showEvent,exitEvent;readonly string stateFile,testDirectory;readonly bool smokeRun;readonly AppearanceSettings appearance;
-    readonly NativeFollower follower;readonly HostTracker tracker;IntPtr target,observed,owner;bool alert,manual,pinned,disposed,smokeExpired;int smokeTicks;string paintKey,trayText;
+    readonly NativeFollower follower;readonly HostTracker tracker;IntPtr target,observed,owner;bool alert,manual,pinned,disposed,smokeExpired,followingHost,positioned,lastAlwaysFloating;int smokeTicks;string paintKey,trayText;
     readonly ContextFeature contextFeature;readonly ContextTracker contextTracker;readonly ContextAlerts contextAlerts;ContextReminder contextReminder;
     public MenuApplication(EventWaitHandle show,EventWaitHandle exit,string testRoot,bool runSmoke,bool openInitially){
       showEvent=show;exitEvent=exit;testDirectory=testRoot;smokeRun=runSmoke;
@@ -97,14 +97,14 @@ namespace RingTimer {
       stateFile=Path.Combine(data,"state.json");engine=new TimerEngine(TimerEngine.Load(stateFile),()=>DateTime.UtcNow);timerFeature=new TimerFeature(engine,Save);stats=new StatsStore(Path.Combine(data,"stats.json"));
       string moduleRoot=Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"..","modules"));if(!Directory.Exists(moduleRoot))moduleRoot=Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"..","plugin","modules"));
       contextFeature=new ContextFeature();contextAlerts=new ContextAlerts(Path.Combine(data,"context-alerts.json"));
-      appearance=new AppearanceSettings(Path.Combine(data,"appearance.json"));registry=FeatureRegistry.Load(moduleRoot,timerFeature,new StatsFeature(stats),contextFeature);bubble=new Bubble();panel=new MenuWindow(registry,()=>{alert=false;manual=false;pinned=false;panel.Topmost=false;Track();},ResetPosition,appearance);
+      appearance=new AppearanceSettings(Path.Combine(data,"appearance.json"));registry=FeatureRegistry.Load(moduleRoot,timerFeature,new StatsFeature(stats),contextFeature);bubble=new Bubble();panel=new MenuWindow(registry,()=>{alert=false;manual=false;pinned=false;Track();},ResetPosition,appearance){ShowActivated=false};lastAlwaysFloating=appearance.AlwaysFloating;
       if(testRoot==null&&registry.Find("context")!=null)contextTracker=new ContextTracker(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex"));
       follower=new NativeFollower();tracker=new HostTracker(Track);
       panel.Launcher=bubble;panel.AnchorBounds=()=>bubble.IsVisible?(Native.RECT?)bubble.PixelBounds:null;
       bubble.Clicked=()=>{if(panel.IsVisible&&!panel.IsClosing)panel.ClosePanel();else OpenPanel(false,null);};
       bubble.DragStarted=()=>follower.Suspend(true);bubble.PositionChanged=()=>{if(panel.IsVisible)PlacePanel();};
-      bubble.DragArea=()=>{Native.RECT host;if(target==IntPtr.Zero||!Native.GetWindowRect(target,out host))return null;var area=Forms.Screen.FromHandle(target).WorkingArea;return (Native.RECT?)new Native.RECT{Left=Math.Max(host.Left,area.Left),Top=Math.Max(host.Top,area.Top),Right=Math.Min(host.Right,area.Right),Bottom=Math.Min(host.Bottom,area.Bottom)};};
-      bubble.Dragged=()=>{Native.RECT r;if(target!=IntPtr.Zero&&Native.GetWindowRect(target,out r)){var b=bubble.PixelBounds;double scale=Native.ScaleFor(bubble.Handle);engine.State.OffsetX=(int)((r.Right-b.Right)/scale);engine.State.OffsetY=(int)((r.Bottom-b.Bottom)/scale);Save();}};
+      bubble.DragArea=()=>{Native.RECT host;if(!followingHost||!Native.GetWindowRect(target,out host)){Native.POINT cursor;Native.GetCursorPos(out cursor);return (Native.RECT?)ToRect(Forms.Screen.FromPoint(new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea);}var area=Forms.Screen.FromHandle(target).WorkingArea;return (Native.RECT?)new Native.RECT{Left=Math.Max(host.Left,area.Left),Top=Math.Max(host.Top,area.Top),Right=Math.Min(host.Right,area.Right),Bottom=Math.Min(host.Bottom,area.Bottom)};};
+      bubble.Dragged=()=>{Native.RECT r;if(followingHost&&Native.GetWindowRect(target,out r))RememberHostOffset(r);};
       bubble.DragEnded=()=>{PublishLayout();follower.Suspend(false);};panel.PresentationRequested=PreparePanel;
       icon=MakeIcon();tray=new Forms.NotifyIcon{Icon=icon,Text="小菜单",Visible=true};tray.BalloonTipClicked+=(s,e)=>OpenPanel(true,"timer");
       tray.MouseClick+=(s,e)=>{if(e.Button==Forms.MouseButtons.Left){if(panel.IsVisible&&!panel.IsClosing)panel.ClosePanel();else OpenPanel(true,null);}};
@@ -113,20 +113,23 @@ namespace RingTimer {
       var startup=new Forms.ToolStripMenuItem("登录 Windows 时启动"){CheckOnClick=true,Checked=File.Exists(StartupPath())};
       startup.CheckedChanged+=(s,e)=>SetStartup(startup.Checked);menu.Items.Add(startup);menu.Items.Add(new Forms.ToolStripSeparator());menu.Items.Add("退出小菜单",null,(s,e)=>Application.Current.Shutdown());tray.ContextMenuStrip=menu;foreach(Forms.ToolStripItem item in menu.Items)item.Tag=item.Text;L.Changed+=UpdateTrayLanguage;UpdateTrayLanguage();Theme.Changed+=UpdateTrayTheme;
       tick=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(200)};tick.Tick+=(s,e)=>OnTick();tick.Start();
+      appearance.Changed+=AppearanceChanged;
       if(smokeRun){Directory.CreateDirectory(testRoot);engine.State.Sound=false;engine.Start(2);timerFeature.Panel.SetDuration(2);OpenPanel(true,"timer");}else{Track();if(openInitially)OpenPanel(true,null);}
     }
     void UpdateTrayLanguage(){if(disposed)return;foreach(Forms.ToolStripItem item in tray.ContextMenuStrip.Items)item.Text=L.T((string)item.Tag);string text=L.T("小菜单")+" · "+timerFeature.Summary;tray.Text=text.Length>63?text.Substring(0,63):text;paintKey=null;}
     void UpdateTrayTheme(){if(disposed||tray.ContextMenuStrip==null)return;var menu=tray.ContextMenuStrip;menu.BackColor=DarkMenuColors.FromBrush(Theme.Background);menu.ForeColor=DarkMenuColors.FromBrush(Theme.Foreground);menu.Invalidate(true);}
-    void ResetPosition(){engine.State.OffsetX=24;engine.State.OffsetY=28;Save();Track();}
+    void ResetPosition(){engine.State.OffsetX=24;engine.State.OffsetY=28;Save();if(appearance.AlwaysFloating&&!followingHost){positioned=false;EnsureFloatingPosition();if(panel.IsVisible)PlacePanel();}Track();}
+    void RememberHostOffset(Native.RECT host){var b=bubble.PixelBounds;double scale=Native.ScaleFor(bubble.Handle);engine.State.OffsetX=(int)Math.Round((host.Right-b.Right)/scale);engine.State.OffsetY=(int)Math.Round((host.Bottom-b.Bottom)/scale);Save();}
+    void AppearanceChanged(){if(lastAlwaysFloating==appearance.AlwaysFloating)return;lastAlwaysFloating=appearance.AlwaysFloating;manual=false;pinned=false;Track();}
     void Save(){TrySave();}
     bool TrySave(){try{engine.Save(stateFile);return true;}catch(Exception ex){if(!(ex is IOException||ex is UnauthorizedAccessException||ex is System.Security.SecurityException||ex is InvalidOperationException||ex is ArgumentException))throw;if(tray!=null)tray.ShowBalloonTip(4000,L.T("小菜单"),L.T("状态暂时无法保存，当前计时继续运行。"),Forms.ToolTipIcon.Warning);return false;}}
     void OnTick(){
-      if(exitEvent.WaitOne(0)){Application.Current.Shutdown();return;}if(showEvent.WaitOne(0))OpenPanel(true,null);if(engine.State.Status!="finished"){alert=false;}panel.Topmost=alert||pinned;
+      if(exitEvent.WaitOne(0)){Application.Current.Shutdown();return;}if(showEvent.WaitOne(0))OpenPanel(true,null);if(engine.State.Status!="finished"){alert=false;}panel.Topmost=appearance.AlwaysFloating||alert||pinned;
       foreach(var feature in registry.Features)if(feature.Tick()){Save();smokeExpired=true;if(engine.State.Status=="finished"){alert=true;OpenPanel(true,feature.Id);tray.ShowBalloonTip(8000,L.Language=="en"?feature.Title+" reminder":feature.Title+"提醒",feature.Summary,Forms.ToolTipIcon.Info);}if(feature.PlaySound)appearance.Audio.Play(appearance.SoundFile,true);}
       if(engine.State.PendingStats.Count>0&&DateTime.UtcNow>=statsRetry){if(TrySave()&&stats.Collect(engine.State)){Save();statsRetry=DateTime.MinValue;}else statsRetry=DateTime.UtcNow.AddSeconds(10);}
       stats.UpdateLive(engine.CurrentSession());
       Track();string summary=timerFeature.Summary,status=engine.State.Status;
-      if(contextTracker!=null){contextTracker.Follow(target);var usage=contextTracker.Current;contextFeature.Update(usage);
+      if(contextTracker!=null){contextTracker.Follow(followingHost?target:IntPtr.Zero);var usage=contextTracker.Current;contextFeature.Update(usage);
         if(contextReminder!=null&&contextReminder.ThreadId!=usage.ThreadId){contextReminder.Close();contextReminder=null;}
         if(bubble.IsVisible&&contextAlerts.Take(usage)){if(contextReminder!=null)contextReminder.Close();var reminder=new ContextReminder(usage,()=>OpenPanel(true,"context"));contextReminder=reminder;reminder.Closed+=(s,e)=>{if(contextReminder==reminder)contextReminder=null;};reminder.Place(bubble.PixelBounds,target);reminder.Show();}
         if(!bubble.IsVisible&&contextReminder!=null){contextReminder.Close();contextReminder=null;}
@@ -136,8 +139,7 @@ namespace RingTimer {
         // for every refresh, so an unchanged 200ms tick must not trigger layout.
         string key=status+"|"+(int)Math.Ceiling(engine.Remaining)+"|"+engine.State.Total+"|"+summary+"|"+panel.ActiveId+"|"+stats.Revision+"|"+DateTime.Today.Ticks+"|"+contextFeature.Summary+"|"+contextFeature.Usage.ThreadId;
         if(panel.IsVisible&&key!=paintKey){paintKey=key;panel.Refresh();}
-        double progress=status=="running"||status=="paused"?(engine.State.Total>0?Math.Max(0,Math.Min(1,engine.Remaining/engine.State.Total)):0):1;
-        bubble.SetStatus(summary,status,progress);
+        bubble.SetStage(summary,engine,panel.AnimationsEnabled);
         bubble.SetContext(contextFeature.Usage);
       }
       // Writing NotifyIcon.Text posts a shell message; only write on change.
@@ -147,15 +149,28 @@ namespace RingTimer {
     void Track(){
       if(disposed)return;IntPtr fg=Native.GetForegroundWindow();
       if(testDirectory!=null&&!smokeRun){long h;string f=Path.Combine(testDirectory,"foreground.txt");try{if(File.Exists(f)&&Int64.TryParse(File.ReadAllText(f),out h))fg=new IntPtr(h);}catch(IOException){return;}}
-      bool own=Native.IsOurWindow(fg);if(fg!=observed){observed=fg;if(!own){target=Native.CodexHost(fg);if(!smokeRun)manual=false;}}
+      IntPtr previousTarget=target;bool own=Native.IsOurWindow(fg);if(fg!=observed){observed=fg;if(!own){target=Native.CodexHost(fg);if(!smokeRun)manual=false;}}
       Native.RECT r;bool valid=target!=IntPtr.Zero&&Native.IsWindowVisible(target)&&!Native.IsIconic(target)&&Native.GetWindowRect(target,out r);
-      if(!valid){follower.Update(null);bubble.Hide();if(!alert&&!manual)panel.HideImmediately();if(owner!=IntPtr.Zero){Native.SetOwner(bubble.Handle,IntPtr.Zero);Native.SetOwner(panel.Handle,IntPtr.Zero);owner=IntPtr.Zero;}return;}
-      if(owner!=target){Native.SetOwner(bubble.Handle,target);Native.SetOwner(panel.Handle,target);owner=target;}
+      bool wasFollowing=followingHost;followingHost=valid;bool floating=appearance.AlwaysFloating;
+      // Owned HWNDs are hidden by Windows when their owner minimizes or closes.
+      // Floating windows must be independent before that transition can happen.
+      IntPtr nextOwner=floating||!valid?IntPtr.Zero:target;if(owner!=nextOwner){Native.SetOwner(bubble.Handle,nextOwner);Native.SetOwner(panel.Handle,nextOwner);owner=nextOwner;}
+      bubble.Topmost=floating;panel.Topmost=floating||alert||pinned;
+      // Clear the displayed sample in the foreground event, before the next tick
+      // or asynchronous read can publish the newly selected Codex chat.
+      if(!valid||previousTarget!=target){if(contextTracker!=null)contextTracker.Follow(valid?target:IntPtr.Zero);contextFeature.Update(ContextUsage.Unknown(null,null));bubble.SetContext(contextFeature.Usage);if(contextReminder!=null){contextReminder.Close();contextReminder=null;}}
+      if(!valid){
+        follower.Update(null);
+        if(!floating){bubble.Hide();if(!alert&&!manual)panel.HideImmediately();return;}
+        if(!bubble.IsVisible){EnsureFloatingPosition();bubble.Show();}return;
+      }
       if(bubble.Dragging)return;
-      if(!bubble.IsVisible){Native.GetWindowRect(target,out r);var b=bubble.PixelBounds;var area=Forms.Screen.FromHandle(target).WorkingArea;double scale=Native.ScaleFor(bubble.Handle);bubble.MovePixels(Math.Max(area.Left,Math.Min(area.Right-b.Width,r.Right-(int)(engine.State.OffsetX*scale)-b.Width)),Math.Max(area.Top,Math.Min(area.Bottom-b.Height,r.Bottom-(int)(engine.State.OffsetY*scale)-b.Height)));bubble.Show();}
+      if(floating&&!wasFollowing&&bubble.IsVisible){Native.GetWindowRect(target,out r);RememberHostOffset(r);}
+      if(!bubble.IsVisible){Native.GetWindowRect(target,out r);var b=bubble.PixelBounds;var area=Forms.Screen.FromHandle(target).WorkingArea;double scale=Native.ScaleFor(bubble.Handle);bubble.MovePixels(Math.Max(area.Left,Math.Min(area.Right-b.Width,r.Right-(int)(engine.State.OffsetX*scale)-b.Width)),Math.Max(area.Top,Math.Min(area.Bottom-b.Height,r.Bottom-(int)(engine.State.OffsetY*scale)-b.Height)));positioned=true;bubble.Show();}
       PublishLayout();
     }
-    void PublishLayout(){if(follower==null)return;double scale=Native.ScaleFor(bubble.Handle);follower.Update(target==IntPtr.Zero?null:new FollowLayout(target,bubble.Handle,panel.IsVisible?panel.Handle:IntPtr.Zero,(int)(engine.State.OffsetX*scale),(int)(engine.State.OffsetY*scale),(int)(8*scale),panel.Above?-1:1,(int)Math.Round(Theme.LauncherDockInset*scale)));}
+    void EnsureFloatingPosition(){var b=bubble.PixelBounds;Native.POINT cursor;Native.GetCursorPos(out cursor);var area=Forms.Screen.FromPoint(positioned?new System.Drawing.Point(b.Left,b.Top):new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea;int x=positioned?b.Left:area.Right-b.Width-24,y=positioned?b.Top:area.Bottom-b.Height-28;bubble.MovePixels(Math.Max(area.Left,Math.Min(area.Right-b.Width,x)),Math.Max(area.Top,Math.Min(area.Bottom-b.Height,y)));positioned=true;}
+    void PublishLayout(){if(follower==null)return;double scale=Native.ScaleFor(bubble.Handle);follower.Update(!followingHost?null:new FollowLayout(target,bubble.Handle,panel.IsVisible?panel.Handle:IntPtr.Zero,(int)(engine.State.OffsetX*scale),(int)(engine.State.OffsetY*scale),(int)(8*scale),panel.Above?-1:1,(int)Math.Round(Theme.LauncherDockInset*scale),panel.PlacementHeightPixels,panel.PlacementOffsetPixels));}
     void PlacePanel(){PlacePanel(bubble,panel,panel.Above?-1:1);}
     static Native.RECT ToRect(Rectangle r){Native.RECT n=new Native.RECT();n.Left=r.Left;n.Top=r.Top;n.Right=r.Right;n.Bottom=r.Bottom;return n;}
     int PanelGap(){return (int)(8*Native.ScaleFor(bubble.Handle));}
@@ -166,25 +181,25 @@ namespace RingTimer {
       try{var size=panel.MeasurePopup();double scale=Native.ScaleFor(panel.Handle);int width=(int)Math.Round(size.Width*scale),height=(int)Math.Round(size.Height*scale);var b=bubble.PixelBounds;Native.POINT cursor;Native.GetCursorPos(out cursor);
         var area=ToRect(Forms.Screen.FromPoint(bubble.IsVisible?new System.Drawing.Point(b.Left,b.Top):new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea);
         int x,y;
-        if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*scale);x=PanelPlacement.DockX(area,b,width,inset);y=PanelPlacement.DockY(area,b,height,inset,panel.Above?-1:1);}
-        else{x=Math.Max(area.Left,area.Right-width-24);y=Math.Max(area.Top,area.Bottom-height-24);}
+        if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*scale);x=PanelPlacement.DockX(area,b,width,inset);y=PanelPlacement.DockY(area,b,panel.PlacementHeightPixels,inset,panel.Above?-1:1)-panel.PlacementOffsetPixels;}
+        else{x=Math.Max(area.Left,area.Right-width-24);y=Math.Max(area.Top,area.Bottom-panel.PlacementHeightPixels-24)-panel.PlacementOffsetPixels;}
         panel.SetBoundsPixels(x,y,width,height);PublishLayout();
       }finally{follower.Suspend(bubble.Dragging);}
     }
     internal static void PlacePanel(Bubble bubble,TimerWindow panel,int side=0){
       var b=bubble.PixelBounds;Native.POINT cursor;Native.GetCursorPos(out cursor);
       var area=ToRect(Forms.Screen.FromPoint(bubble.IsVisible?new System.Drawing.Point(b.Left,b.Top):new System.Drawing.Point(cursor.X,cursor.Y)).WorkingArea);
-      var p=panel.PixelBounds;int gap=(int)(8*Native.ScaleFor(bubble.Handle));int x,y;
-      if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*Native.ScaleFor(bubble.Handle));x=PanelPlacement.DockX(area,b,p.Width,inset);y=PanelPlacement.DockY(area,b,p.Height,inset,side==0?-1:side);}
-      else{x=Math.Max(area.Left,area.Right-p.Width-24);y=Math.Max(area.Top,area.Bottom-p.Height-24);}
+      var p=panel.PixelBounds;var menu=panel as MenuWindow;int height=menu==null?p.Height:menu.PlacementHeightPixels,offset=menu==null?0:menu.PlacementOffsetPixels;int x,y;
+      if(bubble.IsVisible){int inset=(int)Math.Round(Theme.LauncherDockInset*Native.ScaleFor(bubble.Handle));x=PanelPlacement.DockX(area,b,p.Width,inset);y=PanelPlacement.DockY(area,b,height,inset,side==0?-1:side)-offset;}
+      else{x=Math.Max(area.Left,area.Right-p.Width-24);y=Math.Max(area.Top,area.Bottom-height-24)-offset;}
       panel.MovePixels(x,y);
     }
     // A panel opened from the tray, the shortcut or a Codex request cannot rely on
     // Activate() to come forward, so it is pinned above other windows until dismissed.
     void OpenPanel(bool force,string id){
-      manual=force;pinned=force;Track();panel.Topmost=alert||pinned;
+      manual=force;pinned=force;Track();panel.Topmost=appearance.AlwaysFloating||alert||pinned;
       if(!panel.IsVisible){var b=bubble.PixelBounds;var area=Forms.Screen.FromHandle(bubble.Handle).WorkingArea;double height=panel.ExpandedHeight()*Native.ScaleFor(panel.Handle);panel.Above=!bubble.IsVisible||b.Top-PanelGap()-height>=area.Top||area.Bottom-b.Bottom<b.Top-area.Top;}
-      if(id!=null)panel.OpenFeature(id);paintKey=null;panel.Refresh();panel.Reveal();panel.Activate();PublishLayout();
+      if(id!=null)panel.OpenFeature(id);paintKey=null;panel.Refresh();panel.Reveal();if(!appearance.AlwaysFloating)panel.Activate();PublishLayout();
     }
     static Icon MakeIcon(){
       int size=Forms.SystemInformation.SmallIconSize.Width;if(size<16)size=16;if(size>64)size=64;double k=size/32.0;
@@ -195,7 +210,7 @@ namespace RingTimer {
     }
     static string StartupPath(){return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup),"CodexRingTimerLite.lnk");}
     void SetStartup(bool enabled){try{if(enabled){object shell=Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")),link=null;try{link=shell.GetType().InvokeMember("CreateShortcut",System.Reflection.BindingFlags.InvokeMethod,null,shell,new object[]{StartupPath()});string canonical=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".codex","tools","codex-ring-timer","plugin","bin","CodexRingTimer.exe");string exe=File.Exists(canonical)?canonical:Forms.Application.ExecutablePath;link.GetType().InvokeMember("TargetPath",System.Reflection.BindingFlags.SetProperty,null,link,new object[]{exe});link.GetType().InvokeMember("Save",System.Reflection.BindingFlags.InvokeMethod,null,link,null);}finally{if(link!=null)Marshal.FinalReleaseComObject(link);Marshal.FinalReleaseComObject(shell);}}else if(File.Exists(StartupPath()))File.Delete(StartupPath());}catch{tray.ShowBalloonTip(4000,L.T("小菜单"),L.T("无法更改登录启动设置"),Forms.ToolTipIcon.Warning);}}
-    public void Dispose(){if(disposed)return;disposed=true;L.Changed-=UpdateTrayLanguage;Theme.Changed-=UpdateTrayTheme;tick.Stop();if(contextTracker!=null)contextTracker.Dispose();if(contextReminder!=null)contextReminder.Close();tracker.Dispose();follower.Dispose();appearance.Dispose();Save();tray.Visible=false;tray.Dispose();icon.Dispose();panel.Disposing=true;panel.Close();bubble.Close();}
+    public void Dispose(){if(disposed)return;disposed=true;L.Changed-=UpdateTrayLanguage;Theme.Changed-=UpdateTrayTheme;appearance.Changed-=AppearanceChanged;tick.Stop();if(contextTracker!=null)contextTracker.Dispose();if(contextReminder!=null)contextReminder.Close();tracker.Dispose();follower.Dispose();appearance.Dispose();Save();tray.Visible=false;tray.Dispose();icon.Dispose();panel.Disposing=true;panel.Close();bubble.Close();}
   }
   static class Program {
     [STAThread]static void Main(string[] args){

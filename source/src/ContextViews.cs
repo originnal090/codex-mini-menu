@@ -9,7 +9,8 @@ namespace RingTimer {
     ContextUsage usage=ContextUsage.Unknown(null,null);StackPanel view;TextBlock percent,title,detail,status;bool dark;
     public event Action ContentChanged;
     public string Id{get{return "context";}}public string Title{get{return L.T("上下文");}}
-    public string Summary{get{return usage.Known?usage.Display+" · "+L.T("已用上下文"):L.T("等待当前对话数据");}}
+    public string Summary{get{return usage.Known?usage.Display+" · "+L.T("已用上下文"):L.T(!String.IsNullOrEmpty(usage.ThreadId)?"暂无用量 · 等待回复完成":!String.IsNullOrEmpty(usage.Title)?"未匹配本地记录 · 查看详情":"未识别对话 · 打开 Codex 聊天");}}
+    public string UnavailableHelp{get{return L.T(!String.IsNullOrEmpty(usage.ThreadId)?"已识别当前对话，但尚未读到有效用量。等待一次回复完成后会自动更新；若仍无数据，请检查本地会话记录是否可读。":!String.IsNullOrEmpty(usage.Title)?"未能将当前标题对应到可读取的本地记录。远程聊天、重名或记录不可读时可能出现；请切换到本地聊天后重试。":"尚未确认当前 Codex 对话。请打开 Codex 并选择一个聊天，识别后会自动更新。");}}
     public string Icon{get{return "M 2,1 L 12,1 L 12,13 L 2,13 Z M 4,4 L 10,4 M 4,7 L 10,7 M 4,10 L 8,10";}}
     public bool PlaySound{get{return false;}}public bool Tick(){return false;}
     static readonly Brush redLight=new SolidColorBrush(Color.FromRgb(190,38,55)),redDark=new SolidColorBrush(Color.FromRgb(255,112,125)),orangeLight=new SolidColorBrush(Color.FromRgb(164,77,0)),orangeDark=new SolidColorBrush(Color.FromRgb(255,172,66));
@@ -26,8 +27,8 @@ namespace RingTimer {
       var hint=Theme.Text("每个对话达到 90% 时提醒一次",12,Theme.Muted);hint.Margin=new Thickness(0,6,0,0);hint.TextWrapping=TextWrapping.Wrap;view.Children.Add(hint);Theme.GroupIsland(view,0,2,new Thickness(16)).Margin=new Thickness(0,0,0,14);Theme.GroupIsland(view,1,3,new Thickness(16)).Margin=new Thickness(0,0,0,14);Theme.GroupIsland(view,2,2,new Thickness(16));Refresh();
     }return view;}}
     public void Refresh(){if(view==null)return;percent.Text=usage.Display;percent.Foreground=Ink(usage);AutomationProperties.SetName(percent,L.T("已用上下文")+" "+usage.Display);title.Text=String.IsNullOrEmpty(usage.Title)?L.T("等待当前对话数据"):ContextSelection.Normalize(usage.Title);title.ToolTip=usage.ThreadId;
-      detail.Text=usage.Known?String.Format("{0:N0} / {1:N0} tokens",usage.Used,usage.Capacity):L.T("暂时无法确认用量");
-      status.Text=L.T(usage.Level=="critical"?"上下文即将用满，建议开启新对话。":usage.Level=="warning"?"上下文已超过 80%，可以准备切换对话。":usage.Known?"跟随当前对话，按最近一次用量更新。":"正在识别当前对话；数据不明确时显示 —。");
+      detail.Text=usage.Known?String.Format("{0:N0} / {1:N0} tokens",usage.Used,usage.Capacity):Summary;detail.TextWrapping=TextWrapping.Wrap;
+      status.Text=usage.Known?L.T(usage.Level=="critical"?"上下文即将用满，建议开启新对话。":usage.Level=="warning"?"上下文已超过 80%，可以准备切换对话。":"跟随当前对话，按最近一次用量更新。"):UnavailableHelp;
     }
   }
   sealed class ContextReminder:TimerWindow {

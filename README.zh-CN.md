@@ -4,9 +4,20 @@
 
 一个陪在 Codex 身边的 Windows 悬浮计时器：支持工作／休息倒计时、自定义番茄钟式专注循环、定时休息提醒、专注时间统计与聊天上下文占用。还有可以倾斜把玩的银色闪卡，以及围绕卡片中心旋转、与边框同步变色的冷暖模糊柔光。
 
-[English](README.md) · **简体中文** · **[下载 v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [更新记录](CHANGELOG.md) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
+[English](README.md) · **简体中文** · **[下载 v2.22.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [更新记录](CHANGELOG.md) · [反馈与建议](https://github.com/originnal090/codex-mini-menu/issues)
 
 Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English
+
+## v2.22.0 更新
+
+- 菜单主页提供计时、上下文和设置，统计从计时页顶部进入。
+- 展开与页面切换加入柔光和文字显现，计时与统计使用短距离滑入。
+- 悬浮环按工作／休息时长分段，当前阶段的进度从空轨道平滑填入。
+- 计时和统计数字加入 ease-out 入场，图表逐步展开。
+- 增加始终悬浮、玻璃提示音开关和轻薄浮岛反光，改进卡片伸缩与拖动合成。
+- 上下文识别兼容扩展路径及标题中的成对 Markdown 加粗标记。
+
+本版完成编译及安装包文件校验。本次发布未运行自动化、桌面或性能测试。下方演示和 2.17.0 测量记录属于历史版本。
 
 ## 为什么做这个小插件？
 
@@ -59,11 +70,12 @@ Windows 10 / 11 · .NET Framework 4.8 · 简体中文 / English
 
 ## 装好它，给下一次休息留个提醒
 
-1. 前往 **[最新发布页](https://github.com/originnal090/codex-mini-menu/releases/latest)**，下载 `CodexMiniMenu-Windows-2.17.0.zip`。
+1. 前往 **[最新发布页](https://github.com/originnal090/codex-mini-menu/releases/latest)**，下载 `CodexMiniMenu-Windows-2.22.0.zip`。
 2. 完整解压，运行 **`install.cmd`**。
-3. 打开桌面的 **Codex Mini Menu**，设好工作与休息时长，就可以开始啦！
+3. 安装完成后，桌面和开始菜单会出现 **Codex Mini Menu** 快捷方式。
+4. **推荐启动顺序：先启动 GPT 桌面版（承载 Codex 聊天的桌面应用），再双击桌面的 Codex Mini Menu 快捷方式启动小菜单。** 然后设置工作与休息时长。
 
-安装器会注册本地 Codex 插件并创建快捷方式；升级保留计时状态和偏好。需要 .NET Framework 4.8，运行插件无需 Node.js 或 Python。托盘支持打开菜单、恢复位置和退出；卸载请运行 `uninstall.cmd`。
+安装器会尝试注册本地 Codex 插件，并创建桌面和开始菜单快捷方式；升级保留计时状态和偏好。需要 .NET Framework 4.8，运行插件无需 Node.js 或 Python。托盘支持打开菜单、恢复位置和退出；卸载请运行 `uninstall.cmd`。
 
 状态、历史、外观和声音设置保存在本机 `%USERPROFILE%\.codex\timer-data`。Windows 背景模糊取决于合成能力和系统透明效果设置。
 

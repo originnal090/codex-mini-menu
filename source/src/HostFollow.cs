@@ -7,8 +7,8 @@ namespace RingTimer {
   // Immutable layout shared with the native worker. All units here are physical pixels.
   sealed class FollowLayout {
     public readonly IntPtr Host,Launcher,Panel;
-    public readonly int OffsetX,OffsetY,Gap,Side,DockInset;
-    public FollowLayout(IntPtr host,IntPtr launcher,IntPtr panel,int x,int y,int gap,int side=0,int dockInset=0){Host=host;Launcher=launcher;Panel=panel;OffsetX=x;OffsetY=y;Gap=gap;Side=side;DockInset=dockInset;}
+    public readonly int OffsetX,OffsetY,Gap,Side,DockInset,PanelHeight,PanelOffsetY;
+    public FollowLayout(IntPtr host,IntPtr launcher,IntPtr panel,int x,int y,int gap,int side=0,int dockInset=0,int panelHeight=0,int panelOffsetY=0){Host=host;Launcher=launcher;Panel=panel;OffsetX=x;OffsetY=y;Gap=gap;Side=side;DockInset=dockInset;PanelHeight=panelHeight;PanelOffsetY=panelOffsetY;}
   }
   // One placement rule shared by the WPF thread and the native follower: the card's
   // right edge follows the launcher, it prefers to sit above the launcher and flips
@@ -30,6 +30,8 @@ namespace RingTimer {
   sealed class NativeFollower:IDisposable {
     const uint Sync=0x8001,Quit=0x12;
     internal const int MoveMessage=0x8078;
+    internal const int PlacementCompleteMessage=0x8079;
+    [ThreadStatic]internal static bool ApplyingPlacement;
     static readonly object instancesGate=new object();static readonly Dictionary<int,NativeFollower> instances=new Dictionary<int,NativeFollower>();static int nextId;
     sealed class Position {public int X,Y,Generation;}
     readonly int id=Interlocked.Increment(ref nextId);int generation;
@@ -40,6 +42,7 @@ namespace RingTimer {
     [DllImport("user32.dll")]static extern bool PeekMessage(out Message m,IntPtr w,uint a,uint b,uint flags);
     [DllImport("user32.dll")]static extern bool PostThreadMessage(uint thread,uint message,UIntPtr w,IntPtr l);
     [DllImport("user32.dll")]static extern bool PostMessage(IntPtr window,int message,IntPtr w,IntPtr l);
+    [DllImport("user32.dll")]static extern IntPtr SendMessage(IntPtr window,int message,IntPtr w,IntPtr l);
     [DllImport("user32.dll")]static extern bool TranslateMessage(ref Message m);
     [DllImport("user32.dll")]static extern IntPtr DispatchMessage(ref Message m);
     [DllImport("kernel32.dll")]static extern uint GetCurrentThreadId();
@@ -47,12 +50,15 @@ namespace RingTimer {
     [DllImport("user32.dll")]static extern IntPtr MonitorFromWindow(IntPtr window,uint flags);
     [DllImport("user32.dll")]static extern bool GetMonitorInfo(IntPtr monitor,ref MonitorInfo info);
     [DllImport("user32.dll")]static extern bool IsWindow(IntPtr window);
+    [DllImport("user32.dll")]static extern IntPtr BeginDeferWindowPos(int count);
+    [DllImport("user32.dll")]static extern IntPtr DeferWindowPos(IntPtr batch,IntPtr window,IntPtr insert,int x,int y,int width,int height,uint flags);
+    [DllImport("user32.dll")]static extern bool EndDeferWindowPos(IntPtr batch);
     readonly object gate=new object();readonly Thread thread;readonly ManualResetEvent ready=new ManualResetEvent(false);
-    readonly Native.WinEventProc callback;FollowLayout layout;uint threadId;int posted;bool paused,stopping;
+    readonly Native.WinEventProc callback;FollowLayout layout;uint threadId;int posted;bool paused,stopping,deliveryPosted;
     IntPtr locationHook,moveHook,hookTarget;public bool Running{get;private set;}public long Events,Moves;
     public NativeFollower(){callback=OnEvent;lock(instancesGate){instances.Add(id,this);}thread=new Thread(Pump){IsBackground=true,Name="Mini menu window follower"};thread.Start();ready.WaitOne(1000);}
-    void Invalidate(){generation++;positions.Clear();}
-    public void Update(FollowLayout next){lock(gate){if(stopping)return;if(layout==null||next==null||layout.Host!=next.Host||layout.Panel!=next.Panel||layout.Side!=next.Side)Invalidate();layout=next;}Queue();}
+    void Invalidate(){generation++;positions.Clear();deliveryPosted=false;}
+    public void Update(FollowLayout next){lock(gate){if(stopping)return;if(layout==null||next==null||layout.Host!=next.Host||layout.Launcher!=next.Launcher||layout.Panel!=next.Panel||layout.Side!=next.Side||layout.PanelHeight!=next.PanelHeight||layout.PanelOffsetY!=next.PanelOffsetY)Invalidate();layout=next;}Queue();}
     public void Suspend(bool value){lock(gate){paused=value;Invalidate();}Queue();}
     void Queue(){if(threadId!=0&&Interlocked.Exchange(ref posted,1)==0)if(!PostThreadMessage(threadId,Sync,UIntPtr.Zero,IntPtr.Zero))Interlocked.Exchange(ref posted,0);}
     void OnEvent(IntPtr h,uint kind,IntPtr window,int obj,int child,uint source,uint time){lock(gate){if(stopping||layout==null||window!=layout.Host||obj!=0||child!=0)return;}Interlocked.Increment(ref Events);Queue();}
@@ -71,14 +77,38 @@ namespace RingTimer {
       Position old;bool queued=positions.TryGetValue(h,out old)&&old.Generation==generation;
       if(current.Left==x&&current.Top==y&&!queued)return;
       positions[h]=new Position{X=x,Y=y,Generation=generation};
-      if(!queued&&!PostMessage(h,MoveMessage,new IntPtr(id),new IntPtr(generation)))positions.Remove(h);
     }
+    void QueueDelivery(IntPtr window){if(positions.Count>0&&!deliveryPosted)deliveryPosted=PostMessage(window,MoveMessage,new IntPtr(id),new IntPtr(generation));}
     internal static void Deliver(IntPtr window,IntPtr sender,IntPtr epoch){NativeFollower f;lock(instancesGate){if(!instances.TryGetValue(sender.ToInt32(),out f))return;}f.Apply(window,epoch.ToInt32());}
-    void Apply(IntPtr window,int epoch){lock(gate){
-      Position p;if(stopping||paused||epoch!=generation||layout==null||!positions.TryGetValue(window,out p)||p.Generation!=epoch)return;positions.Remove(window);
-      if(!IsWindow(layout.Host)||Native.IsIconic(layout.Host)||!Native.IsWindowVisible(layout.Host))return;
-      Native.RECT current;if(Native.GetWindowRect(window,out current)&&(current.Left!=p.X||current.Top!=p.Y)&&Native.SetWindowPos(window,IntPtr.Zero,p.X,p.Y,0,0,0x0015))Interlocked.Increment(ref Moves);
-    }}
+    Position Take(IntPtr window,int epoch){Position p;if(!positions.TryGetValue(window,out p)||p.Generation!=epoch)return null;positions.Remove(window);return p;}
+    static bool NeedsMove(IntPtr window,Position p){Native.RECT current;return p!=null&&Native.GetWindowRect(window,out current)&&(current.Left!=p.X||current.Top!=p.Y);}
+    void MoveNow(IntPtr window,Position p){if(NeedsMove(window,p)&&Native.SetWindowPos(window,IntPtr.Zero,p.X,p.Y,0,0,0x0015))Interlocked.Increment(ref Moves);}
+    void Apply(IntPtr window,int epoch){Position launcher,panel;IntPtr host,launcherHandle,panelHandle;lock(gate){
+      if(stopping||paused||epoch!=generation||layout==null||window!=layout.Launcher)return;deliveryPosted=false;
+      host=layout.Host;launcherHandle=layout.Launcher;panelHandle=layout.Panel;launcher=Take(launcherHandle,epoch);panel=Take(panelHandle,epoch);
+    }
+      // SetWindowPos synchronously calls the WPF HWND hooks. Let the native
+      // worker collect the next host position while those hooks/compositor run.
+      // Delivery and drag handoff both run on the owning window's UI thread.
+      if(!IsWindow(host)||Native.IsIconic(host)||!Native.IsWindowVisible(host))return;
+      // The launcher and card describe one anchor. Commit the same snapshot
+      // together, so a newly queued host event cannot split their positions.
+      bool moveLauncher=NeedsMove(launcherHandle,launcher),movePanel=NeedsMove(panelHandle,panel);
+      if(!moveLauncher&&!movePanel)return;
+      bool nested=ApplyingPlacement;ApplyingPlacement=true;try{if(moveLauncher&&movePanel){
+        IntPtr batch=BeginDeferWindowPos(2);
+        if(batch!=IntPtr.Zero)batch=DeferWindowPos(batch,launcherHandle,IntPtr.Zero,launcher.X,launcher.Y,0,0,0x0015);
+        if(batch!=IntPtr.Zero)batch=DeferWindowPos(batch,panelHandle,IntPtr.Zero,panel.X,panel.Y,0,0,0x0015);
+        if(batch!=IntPtr.Zero&&EndDeferWindowPos(batch)){Interlocked.Add(ref Moves,2);return;}
+      }
+      if(moveLauncher)MoveNow(launcherHandle,launcher);if(movePanel)MoveNow(panelHandle,panel);
+      }finally{ApplyingPlacement=nested;if(!nested){
+        // Native position notifications arrive inside the batch. Refresh the
+        // contour only after both HWNDs expose their final anchor coordinates.
+        if(moveLauncher)SendMessage(launcherHandle,PlacementCompleteMessage,IntPtr.Zero,IntPtr.Zero);
+        if(panelHandle!=IntPtr.Zero)SendMessage(panelHandle,PlacementCompleteMessage,IntPtr.Zero,IntPtr.Zero);
+      }}
+    }
     void SyncLayout(){lock(gate){
       var l=layout;Hook(l==null?IntPtr.Zero:l.Host);if(stopping||paused||l==null||!IsWindow(l.Host)||Native.IsIconic(l.Host)||!Native.IsWindowVisible(l.Host))return;
       Native.RECT host,b;if(!Native.GetWindowRect(l.Host,out host)||!Native.GetWindowRect(l.Launcher,out b))return;
@@ -87,7 +117,11 @@ namespace RingTimer {
       if(right-left<b.Width||bottom-top<b.Height)return;
       int x=Clamp(host.Right-l.OffsetX-b.Width,left,right-b.Width),y=Clamp(host.Bottom-l.OffsetY-b.Height,top,bottom-b.Height);
       Move(l.Launcher,x,y,b);
-      Native.RECT p;if(l.Panel!=IntPtr.Zero&&Native.GetWindowRect(l.Panel,out p)){var anchor=new Native.RECT{Left=x,Top=y,Right=x+b.Width,Bottom=y+b.Height};int px=l.DockInset>0?PanelPlacement.DockX(monitor.Work,anchor,p.Width,l.DockInset):PanelPlacement.X(monitor.Work,anchor,p.Width),py=l.DockInset>0?PanelPlacement.DockY(monitor.Work,anchor,p.Height,l.DockInset,l.Side):PanelPlacement.Y(monitor.Work,anchor,p.Height,l.Gap,l.Side);Move(l.Panel,px,py,p);}
+      Native.RECT p;if(l.Panel!=IntPtr.Zero&&Native.GetWindowRect(l.Panel,out p)){var anchor=new Native.RECT{Left=x,Top=y,Right=x+b.Width,Bottom=y+b.Height};int height=l.PanelHeight>0?l.PanelHeight:p.Height;
+        // The stable backing HWND can extend beyond the visible card. Clamp the
+        // card first, then translate back to the HWND's padded origin.
+        int px=l.DockInset>0?PanelPlacement.DockX(monitor.Work,anchor,p.Width,l.DockInset):PanelPlacement.X(monitor.Work,anchor,p.Width),py=(l.DockInset>0?PanelPlacement.DockY(monitor.Work,anchor,height,l.DockInset,l.Side):PanelPlacement.Y(monitor.Work,anchor,height,l.Gap,l.Side))-l.PanelOffsetY;Move(l.Panel,px,py,p);}
+      QueueDelivery(l.Launcher);
     }}
     void Pump(){IntPtr previous=IntPtr.Zero;try{
       try{previous=SetThreadDpiAwarenessContext(new IntPtr(-4));}catch(EntryPointNotFoundException){}

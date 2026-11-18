@@ -75,7 +75,7 @@ namespace RingTimer {
       editorBackdrop.Opacity=p;page.Opacity=1-p;editorShade.Opacity=p;
       editor.Child.Opacity=1;editor.Opacity=p;
       editor.Child.IsHitTestVisible=!editorClosing&&p>.8;
-      editorSource.Opacity=remaining;
+      editorSource.Opacity=remaining;var host=Window.GetWindow(this) as MenuWindow;if(host!=null)host.CardPresenter.RefreshRelief();
     }
     void AnimateEditor(double target,int duration,Action completed){
       double from=EditorProgress;int epoch=++editorEpoch;

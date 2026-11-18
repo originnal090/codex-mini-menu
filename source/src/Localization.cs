@@ -9,6 +9,11 @@ namespace RingTimer {
   // pages are not retained by the language service.
   static class L {
     static readonly Dictionary<string,string> english=new Dictionary<string,string>{
+      {"按住右键摆动卡片","Hold right mouse button to tilt the card"},{"将圆环移回默认位置","Move the ring back to its default position"},
+      {"未识别对话 · 打开 Codex 聊天","No chat detected · Open a Codex chat"},{"未匹配本地记录 · 查看详情","No local match · View details"},{"暂无用量 · 等待回复完成","No usage yet · Wait for a reply"},
+      {"尚未确认当前 Codex 对话。请打开 Codex 并选择一个聊天，识别后会自动更新。","The current Codex chat has not been identified. Open Codex and select a chat; usage updates automatically once identified."},
+      {"未能将当前标题对应到可读取的本地记录。远程聊天、重名或记录不可读时可能出现；请切换到本地聊天后重试。","The current title could not be matched to a readable local record. Remote chats, duplicate titles or unreadable records may cause this. Switch to a local chat and try again."},
+      {"已识别当前对话，但尚未读到有效用量。等待一次回复完成后会自动更新；若仍无数据，请检查本地会话记录是否可读。","This chat is identified, but valid usage is not available yet. It updates automatically after a reply completes. If it stays unavailable, check that the local session record is readable."},
       {"拖动圆环调整位置 · 按住右键摆动卡片","Drag ring to move · Hold right button to tilt"},
       {"上下文","Context"},{"已用上下文","Context used"},{"等待当前对话数据","Waiting for current chat"},{"暂时无法确认用量","Usage unavailable"},
       {"80% 变橙 · 90% 变红","Orange at 80% · Red at 90%"},{"每个对话达到 90% 时提醒一次","One reminder per chat at 90%"},
@@ -18,7 +23,7 @@ namespace RingTimer {
 {"暂无完成记录","No completed rounds"},{"执行完成","Completed"},{"再次开始","Start again"},{"3 分钟","3 min"},{"10 分钟","10 min"},{"15 分钟","15 min"},
       {"● 工作","● Work"},{"● 休息","● Rest"},{"工作","Work"},{"休息","Rest"},{"未分类","Unclassified"},{"连续执行","Run"},{"组后等待","sets, then wait"},{"开始工作","Start work"},{"继续","Resume"},{"再来一组","Start again"},{"本组已完成","Cycle complete"},{"单次计时","Single timer"},{"工作时长","Work duration"},{"休息时长","Rest duration"},{"工作与休息循环","Work and rest cycle"},{"确定","Apply"},{"● 今日工作","● Work today"},{"● 今日休息","● Rest today"},{"工作 → 休息 → 等待","Work → Rest → Wait"},{"声音","Tone"},{"音量","Volume"},{"柔和钟声","Soft bell"},{"清脆双音","Double tone"},{"自定义音频","Custom audio"},{"工作或休息结束时播放","Plays after work or rest"},{"更多设置","More settings"},{"结束本次循环","End this cycle"},
       {"小菜单","Mini Menu"},{"计时器","Timer"},{"设置","Settings"},
-      {"计时","Timer"},{"统计","Statistics"},{"打开统计","Open statistics"},{"今日","Today"},{"次","rounds"},
+      {"计时","Timer"},{"统计","Statistics"},{"打开统计","Open statistics"},{"计时与统计视图","Timer and statistics views"},{"今日","Today"},{"次","rounds"},
       {"日历","Calendar"},{"总量","Totals"},{"分段","Sessions"},{"已选择","Selected"},{"上一页","Previous page"},{"下一页","Next page"},
       {"日","Day"},{"周","Week"},{"月","Month"},{"少","Less"},{"多","More"},{"合计","Total"},
       {"查看当天分段","View sessions for this day"},{"暂无记录","No sessions yet"},
@@ -32,6 +37,7 @@ namespace RingTimer {
       {"无法读取此音频，请选择有效的 WAV 或 MP3。","Couldn't read this file. Choose a valid WAV or MP3."},
       {"播放失败，请检查音频文件或恢复系统默认。","Couldn't play audio. Check the file or use the system default."},
       {"外观","Appearance"},{"提示音","Sound"},{"界面语言","Interface language"},{"返回设置","Back to settings"},{"跟随 Codex","Follows Codex"},{"透明度","Transparency"},
+      {"始终悬浮","Always floating"},{"切换应用、最小化或关闭 Codex 后仍显示。上下文仅在确认当前 Codex 聊天时显示。","Stays visible across apps, even when Codex is minimized or closed. Context appears only for a confirmed Codex chat."},
       {"语言","Language"},{"切换后立即生效","Changes apply immediately"},
       {"让背景透过玻璃","Let the background shine through"},
       {"小菜单、计时器与悬浮按钮共用此设置。","Shared by the menu, timer and floating button."},

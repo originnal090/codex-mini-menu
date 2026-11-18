@@ -4,7 +4,7 @@
 
 A floating desktop timer and break reminder for Codex on Windows. Set a countdown or a customizable Pomodoro-style work/rest cycle, track your focus time, and keep an eye on chat context usage. Its glass card tilts with live reflections while two soft colors orbit through the background and border.
 
-**English** · [简体中文](README.zh-CN.md) · **[Download v2.17.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [What's new](CHANGELOG.md) · [Ideas & feedback](https://github.com/originnal090/codex-mini-menu/issues)
+**English** · [简体中文](README.zh-CN.md) · **[Download v2.22.0](https://github.com/originnal090/codex-mini-menu/releases/latest)** · [What's new](CHANGELOG.md) · [Ideas & feedback](https://github.com/originnal090/codex-mini-menu/issues)
 
 Windows 10 / 11 · .NET Framework 4.8 · English / 简体中文
 
@@ -57,13 +57,20 @@ Click **Work** or **Rest** and that island expands into a floating duration edit
 
 Closing the menu keeps the timer running. After sleep or restart, it catches up using its absolute deadline; reminders cannot sound while the app is closed or Windows is asleep. Statistics use actual timer records and exclude paused time.
 
+## New in v2.22.0
+
+The home menu now leads to Timer, Context and Settings, with Statistics inside Timer. This release adds soft-light page reveals, work/rest segments on the launcher, animated metric entrances and progressive chart reveals. It also includes always-floating mode, refined glass controls and context-title/path compatibility fixes.
+
+This release was compiled and its packaged files were checked. Automated, desktop and performance tests were not run for this release. The demonstrations and 2.17.0 measurements below describe the historical version.
+
 ## Install and take your first break
 
-1. Open the **[latest release](https://github.com/originnal090/codex-mini-menu/releases/latest)** and download `CodexMiniMenu-Windows-2.17.0.zip`.
+1. Open the **[latest release](https://github.com/originnal090/codex-mini-menu/releases/latest)** and download `CodexMiniMenu-Windows-2.22.0.zip`.
 2. Extract the entire archive and run **`install.cmd`**.
-3. Open the **Codex Mini Menu** desktop shortcut, set your work/rest times, and get started!
+3. Installation creates **Codex Mini Menu** shortcuts on your desktop and in the Start menu.
+4. **Recommended launch order: start the GPT desktop app that hosts your Codex chats first, then double-click the Codex Mini Menu desktop shortcut.** Set your work/rest durations and start a session.
 
-The installer registers the local Codex plugin and creates shortcuts. Upgrades preserve state and preferences. Requires .NET Framework 4.8; no Node.js or Python runtime is needed to run the menu. The tray provides open, reset-position and exit actions; run `uninstall.cmd` to uninstall.
+The installer attempts to register the local Codex plugin and creates desktop and Start menu shortcuts. Upgrades preserve state and preferences. Requires .NET Framework 4.8; no Node.js or Python runtime is needed to run the menu. The tray provides open, reset-position and exit actions; run `uninstall.cmd` to uninstall.
 
 State, history, appearance and sound preferences stay in `%USERPROFILE%\.codex\timer-data`. Windows backdrop blur depends on composition support and system transparency settings.
 

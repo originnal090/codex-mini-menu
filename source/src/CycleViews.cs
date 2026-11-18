@@ -13,6 +13,8 @@ namespace RingTimer {
  sealed partial class TimerPanel:UserControl {
   readonly TimerEngine engine;readonly Action changed;readonly Grid root,page,actions;readonly TextBlock phase,readout,round,next,workValue,restValue,error;readonly CycleRing ring;readonly Button work,rest,main,stop;readonly TextBox count;readonly ColumnDefinition stopColumn;
   Border editor,editorShade;public bool IsEditing{get{return editor!=null;}}public void CancelEditor(){if(editor!=null)CloseEditor(editorShade);}DurationWheel[] wheels;string editing;bool updating;string lastPhase,lastStatus;
+  readonly MetricEntrance timeEntrance;
+  double displayedRemaining;
   public event Action ContentChanged;
   public FrameworkElement Surface{get{return root;}}
   internal enum TimerPhase{Idle,Armed,Running,Paused,Finished}
@@ -38,6 +40,8 @@ namespace RingTimer {
    main=Theme.Button("开始工作",true);main.Height=44;main.Style=Theme.RoundedButtonStyle(true,22);main.Click+=(s,e)=>DoPrimary();actions.Children.Add(main);
    stop=Theme.Button("",false);stop.Height=44;stop.Style=Theme.RoundedButtonStyle(false,22);L.Bind(stop,FrameworkElement.ToolTipProperty,"重置计时器");L.Bind(stop,AutomationProperties.NameProperty,"重置计时器");stop.Content=new ShapePath{Data=Geometry.Parse("M 3,6 A 6,6 0 1 1 2,11 M 3,2 L 3,6 L 7,6"),Stroke=Theme.Foreground,StrokeThickness=1.5,Width=16,Height=16,Stretch=Stretch.Uniform,StrokeStartLineCap=PenLineCap.Round,StrokeEndLineCap=PenLineCap.Round};stop.Click+=(s,e)=>{engine.StopCycle();changed();PaintState();};Grid.SetColumn(stop,1);actions.Children.Add(stop);
    error=Theme.Text("",11,Theme.Error);error.Margin=new Thickness(0,6,0,0);stack.Children.Add(error);
+   timeEntrance=new MetricEntrance(p=>readout.Text=TimerEngine.Format(displayedRemaining*p));
+   IsVisibleChanged+=(s,e)=>{if(IsVisible){PaintState();timeEntrance.Start(MetricEntrance.Enabled(this),460);}else timeEntrance.Finish();};
    Loaded+=(s,e)=>PaintState();Unloaded+=(s,e)=>ClearEditor(false);IsVisibleChanged+=(s,e)=>{if(!IsVisible)ClearEditor(false);};PaintState();
   }
   bool Active{get{return engine.State.Status=="running"||engine.State.Status=="paused";}}
@@ -47,12 +51,12 @@ namespace RingTimer {
   public void SetDuration(int seconds){if(Active)return;engine.ConfigureCycle(Math.Max(1,Math.Min(86400,seconds)),engine.State.RestSeconds,engine.State.Groups);PaintState();}
   public void DoPrimary(){NormalizeCount();if(engine.State.Status=="running")engine.Pause();else if(engine.State.Status=="paused")engine.Resume();else engine.StartCycle(engine.State.WorkSeconds,engine.State.RestSeconds,engine.State.Groups);changed();PaintState();}
   public void ShowError(string message){error.Text=message;if(ContentChanged!=null)ContentChanged();}
-  public void PaintState(){if(main==null)return;var state=engine.State;bool active=Active,finished=state.Status=="finished";string kind=active?state.Phase:"work";phase.Text=L.T(state.Status=="paused"?"已暂停":finished?"执行完成":kind=="work"?"工作":kind=="rest"?"休息":"计时");double remaining=finished?0:active?engine.Remaining:state.WorkSeconds;readout.Text=TimerEngine.Format(remaining);readout.FontSize=remaining>=3600?31:43;round.Text=active&&!state.Cycle?L.T("单次计时"):(L.Language=="en"?"Set ":"第 ")+(active||finished?state.GroupIndex:1)+" / "+state.Groups+(L.Language=="en"?"":" 组");
+  public void PaintState(){if(main==null)return;var state=engine.State;bool active=Active,finished=state.Status=="finished";string kind=active?state.Phase:"work";phase.Text=L.T(state.Status=="paused"?"已暂停":finished?"执行完成":kind=="work"?"工作":kind=="rest"?"休息":"计时");double remaining=finished?0:active?engine.Remaining:state.WorkSeconds;displayedRemaining=remaining;timeEntrance.Paint();readout.FontSize=remaining>=3600?31:43;round.Text=active&&!state.Cycle?L.T("单次计时"):(L.Language=="en"?"Set ":"第 ")+(active||finished?state.GroupIndex:1)+" / "+state.Groups+(L.Language=="en"?"":" 组");
    next.Text=finished?(L.Language=="en"?"Ready when you are":"已停下，等待再次开始"):active&&!state.Cycle?(L.Language=="en"?"Waits when complete":"结束后等待"):kind=="rest"?(state.GroupIndex<state.Groups?(L.Language=="en"?"Next · Work ":"接下来 · 工作 ")+StatsPanel.Duration(state.WorkSeconds):(L.Language=="en"?"Waits after this set":"本组结束后等待")):(L.Language=="en"?"Next · Rest ":"接下来 · 休息 ")+StatsPanel.Duration(state.RestSeconds);
-   ring.Ink=kind=="rest"?Theme.Focus:Theme.Done;double progress=finished?0:active?engine.Remaining/state.Total:1;double from=ring.Progress;ring.BeginAnimation(CycleRing.ProgressProperty,null);ring.Progress=progress;if(IsVisible&&SystemParameters.ClientAreaAnimation&&lastPhase==kind)ring.BeginAnimation(CycleRing.ProgressProperty,MicroMotion.Ease(from,progress,220));ring.InvalidateVisual();
+   ring.SetStage(engine,MetricEntrance.Enabled(this));
    workValue.Text=StatsPanel.Duration(state.WorkSeconds);restValue.Text=StatsPanel.Duration(state.RestSeconds);work.IsEnabled=rest.IsEnabled=count.IsEnabled=!active;stop.Visibility=active?Visibility.Visible:Visibility.Collapsed;stopColumn.Width=new GridLength(active?44:0);main.Margin=new Thickness(0,0,active?8:0,0);
    string action=state.Status=="running"?"暂停":state.Status=="paused"?"继续":finished?"再次开始":"开始工作";if(AutomationProperties.GetName(main)!=L.T(action)){main.Content=Theme.ActionLabel(action,state.Status=="running");AutomationProperties.SetName(main,L.T(action));}
-   if(lastPhase!=kind||lastStatus!=state.Status){MicroMotion.TextIn(readout);MicroMotion.TextIn(phase);}lastPhase=kind;lastStatus=state.Status;
+   if(lastPhase!=kind||lastStatus!=state.Status){if(MetricEntrance.Enabled(this))MicroMotion.TextIn(phase);}lastPhase=kind;lastStatus=state.Status;
   }
   public void OpenEditor(string kind){if(Active||editor!=null||(kind!="work"&&kind!="rest"))return;editing=kind;var shade=new Border{Background=Theme.Brush("#26000000"),CornerRadius=new CornerRadius(24),Margin=new Thickness(0)};editorShade=shade;shade.MouseLeftButtonDown+=(s,e)=>{CloseEditor(shade);e.Handled=true;};shade.MouseWheel+=(s,e)=>e.Handled=true;root.Children.Add(shade);
    var stack=new StackPanel();var editorScroll=new ScrollViewer{Content=stack,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};Theme.StyleScroll(editorScroll);editor=new Border{Background=EditorGlass(),BorderBrush=Theme.IslandEdge,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(24),Effect=Theme.IslandElevation(),Padding=new Thickness(16),VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0),Child=editorScroll};root.Children.Add(editor);

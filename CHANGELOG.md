@@ -1,5 +1,16 @@
 # Major updates / 重大更新
 
+## 2.22.0 · 柔光、阶段进度与数字入场 / Soft light and stage progress
+
+- 汇入本地 2.18–2.21 及后续改动，增加始终悬浮、玻璃提示音开关、轻薄浮岛反光和锚定页面伸缩。
+- 主页精简为计时、上下文及设置，统计从计时页进入。柔光展开与短促计时切页按场景应用。
+- 工作／休息分段进度环、阶段开始填充动画、指标 ease-out 递增与图表逐步呈现。
+- 上下文识别支持 Windows 扩展路径与含成对 Markdown 加粗标记的聊天名称。
+- 安装创建桌面和开始菜单快捷方式。推荐先启动 GPT 桌面版，再使用小菜单桌面快捷方式。
+- 本次完成编译与安装包文件校验，未运行测试。完整说明见 [v2.22.0 发布记录](docs/release-2.22.0.md)。
+
+Includes the local 2.18–2.21 refinements and subsequent progress-ring, metric-animation and context fixes. The installer creates desktop and Start menu shortcuts. Launch the GPT desktop app first, then the menu shortcut. This release was compiled and packaged without running tests.
+
 Version tags preserve these source milestones. [Download the current Windows release](https://github.com/originnal090/codex-mini-menu/releases/latest).
 
 以下版本均保留源码标签；当前安装包见 [发布页](https://github.com/originnal090/codex-mini-menu/releases/latest)。
